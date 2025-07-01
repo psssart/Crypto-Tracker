@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DexScreenerController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -25,7 +26,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
-    // Routes for authorized and confirmed users:
+    Route::get('/latest-token-profiles/{group?}', [DexScreenerController::class, 'getLatestTokenProfiles'])
+        ->where('group', '[01]')->name('dex.latestTokenProfiles');
+    Route::get('/latest-boosted-tokens/{group?}', [DexScreenerController::class, 'getLatestBoostedTokens'])
+        ->where('group', '[01]')->name('dex.getLatestBoostedTokens');
+    Route::get('/most-boosted-tokens/{group?}', [DexScreenerController::class, 'getMostBoostedTokens'])
+        ->where('group', '[01]')->name('dex.getMostBoostedTokens');
 });
 
 require __DIR__.'/auth.php';

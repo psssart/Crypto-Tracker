@@ -3,224 +3,110 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Enum\Method;
-use App\Exceptions\ApiResponseException;
-use ErrorException;
-use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Exceptions\ApiResponseException;
 
 class ApiService
 {
-    private ?string $sessionId = null;
-
-    public function setSessionId(?string $sessionId): void
-    {
-        $this->sessionId = $sessionId;
-    }
-
-
     /**
+     * Send a GET request.
+     *
+     * @param string $url     The full URL to call.
+     * @param array  $query   Optional query parameters.
+     * @param array  $headers Optional headers.
+     *
      * @throws ApiResponseException
      */
-    public function loginRequest(
-        string  $login,
-        string  $password,
-        ?string $yksCookie = null
-    ): Response
+    public function get(string $url, array $query = [], array $headers = []): Response
     {
+        try {
+            $response = Http::withHeaders($headers)
+                ->timeout(60)
+                ->get($url, $query);
+        } catch (\Throwable $e) {
+            Log::error('API GET request failed', [
+                'url'       => $url,
+                'query'     => $query,
+                'exception' => $e->getMessage(),
+            ]);
+            throw new ApiResponseException('Network error during GET request', 0, $e);
+        }
 
-        return $this->request(
-            method: Method::POST,
-            url: '/webmaster/login',
-            data: [
-                'login' => $login,
-                'password' => $password,
-                //                'permission' => $permission->value,
-                'bearer' => 1,
-            ],
-            page: null,
-            type: 'form_params',
-            cookies: ['yks' => $yksCookie],
-        );
+        return $this->handleResponse($response, 'GET', $url, $query);
     }
-
-    public function tokenLogin(
-        string  $token,
-        ?string $yksCookie = null
-    ): Response
-    {
-
-        return $this->request(
-            method: Method::POST,
-            url: '/webmaster/hijack',
-            data: [
-                'hash' => $token,
-                'bearer' => 1,
-            ],
-            page: null,
-            type: 'form_params',
-        );
-
-    }
-
 
     /**
-     * @throws ApiResponseException|ErrorException
+     * Send a POST request with JSON body.
+     *
+     * @param string $url     The full URL to call.
+     * @param array  $data    The request payload.
+     * @param array  $headers Optional headers.
+     *
+     * @throws ApiResponseException
      */
-    public function request(
-        Method  $method,
-        string  $url,
-        array   $data,
-        ?string $page = null,
-        ?string $type = null,
-        ?array  $cookies = null,
-        ?array  $headers = [],
-    ): Response
+    public function post(string $url, array $data = [], array $headers = []): Response
     {
-        $response = false;
-
         try {
-
-            $isProd = config('app.env') === 'production';
-
-            $headers['X-Requested-With'] = 'XMLHttpRequest';
-
-
-            if(!$isProd){
-                $headers['debug'] = 123;
-            }
-
-            $response = Http::baseUrl(config('app.api'))
+            $response = Http::withHeaders($headers)
                 ->timeout(60)
-                ->when($this->sessionId !== null,
-                    fn(PendingRequest $pendingRequest) => $pendingRequest->withToken((string)$this->sessionId)
-                )
-                ->withHeaders($headers)
-                ->when($cookies !== null, function (PendingRequest $request) use ($cookies) {
-                    return $request
-                        ->withCookies((array)$cookies, parse_url(config('app.api'), PHP_URL_HOST));
-                })
-                ->when(!$isProd, fn($http) => $http->withoutVerifying())
-                ->send($method->value, $url, [
-                    $type => $data,
-                ]);
-        } catch (\Exception $exception) {
-
-            $exception = $exception?->getMessage() ?? 'Something went wrong';
-
-            $error  = $this->extractErrorsMessages($response);
-
-            Log::critical('API Request Failed', [
-                'exception' => $exception,
-                'errors' => $error,
-                'request_method' => $method->value,
-                'request_url' => $url,
-                'request_data' => $data,
-                'page' => $page ?? '',
+                ->post($url, $data);
+        } catch (\Throwable $e) {
+            Log::error('API POST request failed', [
+                'url'       => $url,
+                'data'      => $data,
+                'exception' => $e->getMessage(),
             ]);
-
-
-                throw new ApiResponseException($error ?? '', $response ? $response->status() : 500);
+            throw new ApiResponseException('Network error during POST request', 0, $e);
         }
 
-        if ($response && $response->failed()) {
+        return $this->handleResponse($response, 'POST', $url, $data);
+    }
 
-            $responseBody = isset($response) ? $response?->json() : '';
-
-            $error  = $this->extractErrorsMessages($response);
-
-            Log::critical('API Request Failed', [
-                'exception' => '',
-                'error' => $error,
-                'request_method' => $method->value,
-                'request_url' => $url,
-                'request_data' => $data,
-                'response_body' => $responseBody,
-                'page' => $page ?? '',
+    /**
+     * Send a multipart/form-data POST request.
+     *
+     * @param string $url       The full URL to call.
+     * @param array  $multipart An array of ['name'=>'…','contents'=>'…','filename'=>'…'] items.
+     * @param array  $headers   Optional headers.
+     *
+     * @throws ApiResponseException
+     */
+    public function multipart(string $url, array $multipart, array $headers = []): Response
+    {
+        try {
+            $response = Http::withHeaders($headers)
+                ->timeout(60)
+                ->asMultipart()
+                ->post($url, $multipart);
+        } catch (\Throwable $e) {
+            Log::error('API multipart request failed', [
+                'url'        => $url,
+                'multipart'  => $multipart,
+                'exception'  => $e->getMessage(),
             ]);
-
-            $code = $response->status();
-
-            throw new ApiResponseException($error, $code);
+            throw new ApiResponseException('Network error during multipart request', 0, $e);
         }
 
-        if (!isset($response) || empty($response)) {
+        return $this->handleResponse($response, 'POST (multipart)', $url, $multipart);
+    }
 
-            $response = false;
+    /**
+     * Check for HTTP errors and throw if needed.
+     */
+    protected function handleResponse(Response $response, string $method, string $url, array $payload): Response
+    {
+        if ($response->failed()) {
+            $status  = $response->status();
+            $body    = $response->json();
+            $message = $body['error'] ?? $body['message'] ?? 'Unknown API error';
+
+            Log::error('API response error', compact('method', 'url', 'status', 'payload', 'body'));
+
+            throw new ApiResponseException($message, $status);
         }
-
 
         return $response;
-    }
-
-    public function post(
-        string  $url,
-        array   $data,
-        ?string $page = null,
-        ?string $type = 'form_params',
-        ?array  $cookies = null)
-    {
-
-        return $this->request(method: Method::POST, url: $url, data: $data, page: $page, type: $type, cookies: $cookies);
-    }
-
-    public function get(
-        string  $url,
-        ?array  $data = [],
-        ?string $page = null,
-        ?string $type = null,
-        ?array  $cookies = null)
-    {
-
-        return $this->request(method: Method::GET, url: $url, data: $data, page: $page, type: $type, cookies: $cookies);
-    }
-
-    public function multipart(
-        string $url,
-        array $files = [],
-        array $form = [],
-        ?string $page = null,
-        ?array $cookies = null
-    ): Response {
-
-        $multipartData = [];
-
-        foreach ($files as $key => $file) {
-            if (isset($file['contents']) && isset($file['original_name'])) {
-                $multipartData[] = [
-                    'name'     => $key,
-                    'contents' => $file['contents'],
-                    'filename' => $file['original_name'],
-                ];
-            }
-        }
-
-        foreach ($form as $key => $value) {
-            $multipartData[] = [
-                'name'     => $key,
-                'contents' => $value,
-            ];
-        }
-
-        return $this->request(
-            method: Method::POST,
-            url: $url,
-            data: $multipartData,
-            page: $page,
-            type: 'multipart',
-            cookies: $cookies
-        );
-    }
-
-    private function extractErrorsMessages(mixed $response){
-        if(!isset($response) || empty($response) || $response === false){
-            return '';
-        }
-        $error ??= $response->json('error') ?? $response->json('errors') ?? $response->json('message')  ?? '';
-
-        return  is_array($error) ? json_encode($error) : (string) $error;
-
     }
 }
