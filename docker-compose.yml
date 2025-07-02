@@ -1,0 +1,66 @@
+services:
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: crypto-tracker-app
+        container_name: crypto-tracker-app
+        working_dir: /var/www
+        volumes:
+            - ./crypto-tracker:/var/www
+#            - ./crypto-tracker/vendor:/var/www/vendor
+        env_file:
+            - ./.env
+        depends_on:
+            - db
+            - redis
+
+    webserver:
+        image: nginx:alpine
+        container_name: crypto-tracker-nginx
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - ./nginx/site.conf:/etc/nginx/conf.d/default.conf:ro
+            - ./certs:/etc/nginx/certs:ro
+            - ./crypto-tracker:/var/www:ro
+        depends_on:
+            - app
+
+    db:
+        image: postgres:15
+        container_name: crypto-tracker-postgres
+        environment:
+            POSTGRES_DB: ${DB_DATABASE}
+            POSTGRES_USER: ${DB_USERNAME}
+            POSTGRES_PASSWORD: ${DB_PASSWORD}
+        ports:
+            - "5432:5432"
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+
+    redis:
+        image: redis:7-alpine
+        container_name: crypto-tracker-redis
+        ports:
+            - "6379:6379"
+
+    vite:
+        image: node:22-alpine
+        container_name: crypto-tracker-vite
+        working_dir: /var/www
+        volumes:
+            - ./crypto-tracker:/var/www:delegated
+            - vite_node_modules:/var/www/node_modules
+            - ./.env:/var/www/.env:ro
+            - ./certs:/etc/vite/certs:ro
+        ports:
+            - "5173:5173"
+        command: sh -c "npm install && npm run dev"
+        depends_on:
+            - app
+
+volumes:
+    pgdata:
+    vite_node_modules:

@@ -2,3 +2,10 @@
 .idea
 *.iml
 .vscode
+
+# SSL certificates
+localhost.crt
+localhost.key
+
+# Main enviroment file
+.env
