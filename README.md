@@ -28,7 +28,7 @@ A Laravel 12 + Breeze application, containerized with Docker (PHP-FPM, Nginx, Po
     -keyout certs/localhost.key \
     -out certs/localhost.crt \
     -subj "/CN=localhost"
-3. **Build & start all services**
+4. **Build & start all services**
     ```bash
    docker-compose up -d --build**
 
