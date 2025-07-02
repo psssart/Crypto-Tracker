@@ -7,9 +7,9 @@ export default {
         './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
         './storage/framework/views/*.php',
         './resources/views/**/*.blade.php',
-        './resources/js/**/*.tsx',
+        './resources/js/**/*.{jsx,tsx,js,ts}',
     ],
-
+    darkMode: 'class',
     theme: {
         extend: {
             fontFamily: {

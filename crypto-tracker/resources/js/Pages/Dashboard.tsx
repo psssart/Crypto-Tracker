@@ -86,7 +86,7 @@ export default function Dashboard() {
             <Head title="Tokens" />
 
             <div className="mx-7 py-12 space-y-8">
-                {loading && <p className="text-center">Loading token profiles…</p>}
+                {loading && <p className="text-center text-icon-primary">Loading token profiles…</p>}
                 {error && <p className="text-center text-red-500">{error}</p>}
 
                 {!loading && !error && Object.keys(profiles).length === 0 && (
@@ -122,12 +122,12 @@ export default function Dashboard() {
                                                         img.onerror = null;
                                                         img.src = item.header;
                                                     }}
-                                                    className="w-full h-40 object-cover"
+                                                    className="w-full h-100 object-cover [clip-path:inset(0px_0px_15px_0px)]"
                                                 />
                                             </a>
 
                                             {/* Footer */}
-                                            <div className="flex items-center justify-between p-3">
+                                            <div className="flex items-center justify-between p-3 pt-0">
                                                 {/* Copy button */}
                                                 <button
                                                     onClick={() => handleCopy(item.tokenAddress)}

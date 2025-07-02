@@ -4,11 +4,15 @@ import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
 import { PropsWithChildren, ReactNode, useState } from 'react';
+import { useTheme } from '@/lib/theme-provider';
+import MoonIcon from "@/Components/Icons/Moon";
+import SunIcon from "@/Components/Icons/Sun";
 
 export default function Authenticated({
     header,
     children,
 }: PropsWithChildren<{ header?: ReactNode }>) {
+    const { appearance, updateAppearance } = useTheme();
     const user = usePage().props.auth.user;
 
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
@@ -21,9 +25,30 @@ export default function Authenticated({
                     <div className="flex h-16 justify-between">
                         <div className="flex">
                             <div className="flex shrink-0 items-center">
-                                <Link href="/">
-                                    <ApplicationLogo className="block h-10 w-auto fill-current text-gray-800 dark:text-gray-200" />
-                                </Link>
+                                <Dropdown>
+                                    <Dropdown.Trigger>
+                                        <ApplicationLogo className="block h-10 w-auto fill-current text-gray-800 dark:text-gray-200" />
+                                    </Dropdown.Trigger>
+
+                                    <Dropdown.Content align="left" width="48"
+                                                      contentClasses="py-1 bg-white dark:bg-gray-700">
+                                        {/* Theme‐toggle button */}
+                                        <button
+                                            onClick={() =>
+                                                updateAppearance(appearance === 'dark' ? 'light' : 'dark')
+                                            }
+                                            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
+                                            {appearance === 'dark' ? (
+                                                <SunIcon className="w-5 h-5"/>
+                                            ) : (
+                                                <MoonIcon className="w-7 h-7"/>
+                                            )}
+                                            <span className="ml-2">
+                                                Switch to {appearance === 'dark' ? 'Light' : 'Dark'} Mode
+                                            </span>
+                                        </button>
+                                    </Dropdown.Content>
+                                </Dropdown>
                             </div>
 
                             <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">

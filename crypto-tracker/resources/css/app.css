@@ -10,8 +10,8 @@
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --icon-primary: #a3abb3; /* gray-300 */
-        --icon-secondary: #80838a; /* gray-400 */
+        --icon-primary: #666f77; /* gray-300 */
+        --icon-secondary: #96979e; /* gray-400 */
     }
 }
 
