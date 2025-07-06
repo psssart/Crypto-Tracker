@@ -1,0 +1,41 @@
+version: '3.8'
+services:
+  app:
+    image: yourdockerhub/crypto-tracker-app:latest
+    container_name: crypto-tracker-app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+
+  worker:
+    image: yourdockerhub/crypto-tracker-app:latest
+    container_name: crypto-tracker-worker
+    command: >
+      sh -c "php artisan queue:work redis
+             --sleep=3
+             --tries=3
+             --timeout=90"
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db
+
+  db:
+    image: postgres:15
+    container_name: crypto-tracker-postgres
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: crypto-tracker-redis
+
+volumes:
+  pgdata:

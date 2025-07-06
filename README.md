@@ -7,6 +7,7 @@ A Laravel 12 + Breeze application, containerized with Docker (PHP-FPM, Nginx, Po
 
 ## 📝 Prerequisites
 
+- PHP 8.4.10-NTS, Composer (Latest: v2.8.9), Laravel 12
 - Docker & Docker Compose installed
 - OpenSSL (for self-signed SSL certificate)
 - Windows 11 / WSL2 recommended for best filesystem performance
@@ -18,19 +19,23 @@ A Laravel 12 + Breeze application, containerized with Docker (PHP-FPM, Nginx, Po
 1. **Copy & configure your environment file**
    ```bash
    cp .env.example .env
-   # Then open .env and fill in any missing values (DB credentials, mail, etc.)
+   ```
+   Then open .env and enter your generated **APP_KEY**: 
+   ```bash
+   php artisan key:generate --show
+   ```
+   And fill in any missing values (DB credentials, mail, etc.)
+
 
 2. **Generate a self-signed SSL certificate**
     ```bash
-   mkdir -p certs
-    openssl req -x509 -nodes -days 365 \
-    -newkey rsa:2048 \
-    -keyout certs/localhost.key \
-    -out certs/localhost.crt \
-    -subj "/CN=localhost"
-4. **Build & start all services**
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout certs\localhost.key -out certs\localhost.crt -subj "/CN=localhost"
+
+4. **Run Docker Desktop**
+
+5. **Build & start all services**
     ```bash
-   docker-compose up -d --build**
+   docker-compose up -d --build
 
 ---
 

@@ -1,25 +1,26 @@
-FROM php:8.3-fpm
+# Stage 1 — Node для Vite
+FROM node:22-alpine as node-build
+WORKDIR /app
+COPY ./crypto-tracker/package*.json ./
+RUN npm install
+COPY ./crypto-tracker/ ./
+RUN npm run build
 
-RUN apt-get update \
-  && apt-get install -y \
-       git unzip libpq-dev libonig-dev pkg-config \
-  && docker-php-ext-install \
-       bcmath \
-       mbstring \
-       pdo_pgsql \
+# Stage 2 — PHP (Composer, extensions, app)
+FROM php:8.3-fpm as php-build
+
+RUN apt-get update && apt-get install -y \
+  git unzip libpq-dev libonig-dev pkg-config \
+  && docker-php-ext-install bcmath mbstring pdo_pgsql \
+  && pecl install redis && docker-php-ext-enable redis \
   && rm -rf /var/lib/apt/lists/*
 
-RUN pecl install redis && docker-php-ext-enable redis
-
-# Composer binary
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www
+COPY ./crypto-tracker/ ./
+COPY --from=node-build /app/public/build /var/www/public/build
 
-# Firstly copy whole code
-COPY ./crypto-tracker/ /var/www/
-
-# Install packets
 RUN composer install --no-dev --optimize-autoloader --prefer-dist \
   && chown -R www-data:www-data storage bootstrap/cache
 

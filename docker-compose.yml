@@ -1,21 +1,22 @@
+version: '3.8'
 services:
     app:
         build:
             context: .
             dockerfile: Dockerfile
-        image: crypto-tracker-app
+        image: crypto-tracker-app:dev
         container_name: crypto-tracker-app
         working_dir: /var/www
         volumes:
             - ./crypto-tracker:/var/www
-#            - ./crypto-tracker/vendor:/var/www/vendor
+            - ./.env:/var/www/.env
         env_file:
-            - ./.env
+            - .env
         depends_on:
             - db
             - redis
 
-    webserver:
+    nginx:
         image: nginx:alpine
         container_name: crypto-tracker-nginx
         ports:
@@ -46,21 +47,25 @@ services:
         ports:
             - "6379:6379"
 
-#    vite:
-#        image: node:22-alpine
-#        container_name: crypto-tracker-vite
-#        working_dir: /var/www
-#        volumes:
-#            - ./crypto-tracker:/var/www:delegated
-#            - vite_node_modules:/var/www/node_modules
-#            - ./.env:/var/www/.env:ro
-#            - ./certs:/etc/vite/certs:ro
-#        ports:
-#            - "5173:5173"
-#        command: sh -c "npm install && npm run dev"
-#        depends_on:
-#            - app
+    worker:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: crypto-tracker-worker:dev
+        container_name: crypto-tracker-worker
+        working_dir: /var/www
+        command: >
+            sh -c "php artisan queue:work redis
+                   --sleep=3
+                   --tries=3
+                   --timeout=90"
+        volumes:
+            - ./crypto-tracker:/var/www
+        env_file:
+            - .env
+        depends_on:
+            - redis
+            - db
 
 volumes:
     pgdata:
-#    vite_node_modules:
