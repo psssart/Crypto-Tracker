@@ -1,16 +1,16 @@
 server {
     listen 80;
-    server_name tracker.ghost.voidcyborg.com;
+    server_name tracker.null-land.com;
 
     return 301 https://$host$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name tracker.ghost.voidcyborg.com;
+    server_name tracker.null-land.com;
 
-    ssl_certificate /etc/letsencrypt/live/tracker.ghost.voidcyborg.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/tracker.ghost.voidcyborg.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/tracker.null-land.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/tracker.null-land.com/privkey.pem;
 
     location / {
         proxy_pass http://127.0.0.1:8080;
