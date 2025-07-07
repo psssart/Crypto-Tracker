@@ -37,6 +37,9 @@ A Laravel 12 + Breeze application, containerized with Docker (PHP-FPM, Nginx, Po
     ```bash
    docker-compose up -d --build
 
+6. **Run Vite in Laravel app root**(./crypto-tracker)
+    ```bash
+   npm run dev
 ---
 
 ## ✅ Quick Health Checks

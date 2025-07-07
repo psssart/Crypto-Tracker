@@ -11,6 +11,18 @@
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
         <!-- Scripts -->
+
+        <!-- 1. Theme-initialization script -->
+        <script>
+            (function() {
+                const stored = localStorage.getItem('appearance') || 'system';
+                const isDark = stored === 'dark'
+                    || (stored === 'system'
+                        && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                document.documentElement.classList.toggle('dark', isDark);
+            })();
+        </script>
+
         @routes
         @viteReactRefresh
         @vite(['resources/js/app.tsx', "resources/js/Pages/{$page['component']}.tsx"])

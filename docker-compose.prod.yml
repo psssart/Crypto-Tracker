@@ -1,16 +1,17 @@
-version: '3.8'
 services:
   app:
-    image: yourdockerhub/crypto-tracker-app:latest
+    image: pasubi/crypto-tracker-app:latest
     container_name: crypto-tracker-app
     env_file:
       - .env
     depends_on:
       - db
       - redis
+    ports:
+      - "9000:9000"
 
   worker:
-    image: yourdockerhub/crypto-tracker-app:latest
+    image: pasubi/crypto-tracker-app:latest
     container_name: crypto-tracker-worker
     command: >
       sh -c "php artisan queue:work redis
