@@ -1,4 +1,4 @@
-# Stage 1 — Node для Vite
+# Stage 1 — Node for Vite
 FROM node:22-alpine as node-build
 WORKDIR /app
 COPY ./crypto-tracker/package*.json ./
@@ -19,7 +19,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www
 COPY ./crypto-tracker/ ./
-COPY --from=node-build /app/public/build /var/www/public/build
+COPY --from=node-build /app/public /var/www/public
 
 RUN composer install --no-dev --optimize-autoloader --prefer-dist \
   && chown -R www-data:www-data storage bootstrap/cache
