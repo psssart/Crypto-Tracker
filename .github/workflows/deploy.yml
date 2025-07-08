@@ -58,11 +58,6 @@ jobs:
             IMAGE_TAG=${{ env.IMAGE_TAG }}
           platforms: linux/amd64
 
-      - name: Check built assets inside image
-        run: |
-          docker run --rm -t ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} ls -la /var/www/public/build
-
-
   deploy:
     name: Deploy to Production Server
     runs-on: ubuntu-latest
