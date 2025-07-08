@@ -1,6 +1,6 @@
 services:
   app:
-    image: pasubi/crypto-tracker-app:latest
+    image: pasubi/crypto-tracker-app:${IMAGE_TAG}
     container_name: crypto-tracker-app
     env_file:
       - .env
@@ -11,7 +11,7 @@ services:
       - "9000:9000"
 
   worker:
-    image: pasubi/crypto-tracker-app:latest
+    image: pasubi/crypto-tracker-app:${IMAGE_TAG}
     container_name: crypto-tracker-worker
     command: >
       sh -c "php artisan queue:work redis
@@ -37,6 +37,17 @@ services:
   redis:
     image: redis:7-alpine
     container_name: crypto-tracker-redis
+
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: site
+    container_name: crypto-tracker-nginx
+    ports:
+      - "8080:80"
+    depends_on:
+      - app
 
 volumes:
   pgdata:

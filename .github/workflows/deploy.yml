@@ -6,8 +6,9 @@ on:
       - main
 
 env:
-  IMAGE_NAME: pasubi/crypto-tracker-app
-  IMAGE_TAG: latest
+  IMAGE_NAME_APP:    pasubi/crypto-tracker-app
+  IMAGE_NAME_NGINX:  pasubi/crypto-tracker-nginx
+  IMAGE_TAG:         latest
 
 jobs:
   build-and-push:
@@ -35,12 +36,27 @@ jobs:
       - name: Clear Docker buildx cache (if needed)
         run: docker builder prune -af || true
 
-      - name: Build and Push Docker Image (app + worker)
+      - name: Build & Push app image
         uses: docker/build-push-action@v5
         with:
           context: .
+          target: php-build
+          push:       true
+          tags:       ${{ env.IMAGE_NAME_APP }}:${{ env.IMAGE_TAG }}
+          build-args: |
+            IMAGE_TAG=${{ env.IMAGE_TAG }}
+          platforms:  linux/amd64
+
+      - name: Build & Push nginx image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: site
           push: true
-          tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          tags: ${{ env.IMAGE_NAME_NGINX }}:${{ env.IMAGE_TAG }}
+          build-args: |
+            IMAGE_TAG=${{ env.IMAGE_TAG }}
+          platforms: linux/amd64
 
       - name: Check built assets inside image
         run: |
@@ -62,5 +78,5 @@ jobs:
           script: |
             cd /var/www/crypto-tracker
             docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml -f docker-compose.override.yml up -d --force-recreate
+            docker compose -f docker-compose.prod.yml up -d --force-recreate
             docker exec crypto-tracker-app php artisan migrate --force
