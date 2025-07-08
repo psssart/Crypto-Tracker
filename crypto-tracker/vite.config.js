@@ -3,10 +3,11 @@ import laravel from 'laravel-vite-plugin';
 import react from '@vitejs/plugin-react';
 import fs from 'fs';
 
+const isDevServer = process.env.NODE_ENV !== 'production';
 const isDocker = process.env.VITE_HTTPS === 'true';
 
 // Dev server settings depending on the environment
-const serverConfig = isDocker
+const serverConfig = isDevServer && isDocker
     ? {
         https: {
             key: fs.readFileSync('/etc/vite/certs/localhost.key'),
