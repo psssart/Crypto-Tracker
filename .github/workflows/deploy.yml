@@ -32,12 +32,20 @@ jobs:
           pwd
           ls -la
 
+      - name: Clear Docker buildx cache (if needed)
+        run: docker builder prune -af || true
+
       - name: Build and Push Docker Image (app + worker)
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
+      - name: Check built assets inside image
+        run: |
+          docker run --rm -t ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} ls -la /var/www/public/build
+
 
   deploy:
     name: Deploy to Production Server
