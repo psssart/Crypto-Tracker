@@ -13,21 +13,23 @@ RUN npm run build
 # -----------------------------
 # Stage 2: build php + vendor
 # -----------------------------
-FROM php:8.3-fpm-alpine AS php-build
+FROM php:8.3-fpm AS php-build
 # Installing dependencies
-RUN apk add --no-cache \
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
       git \
       unzip \
-      postgresql-dev \
-      oniguruma-dev \
-      pkgconfig \
-      build-base \
-  && docker-php-ext-install \
+      libpq-dev \
+      libonig-dev \
+      pkg-config \
+      build-essential \
+ && docker-php-ext-install \
       bcmath \
       mbstring \
       pdo_pgsql \
-  && pecl install redis \
-  && docker-php-ext-enable redis
+ && pecl install redis \
+ && docker-php-ext-enable redis \
+ && rm -rf /var/lib/apt/lists/*
 
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
