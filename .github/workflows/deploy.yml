@@ -49,5 +49,5 @@ jobs:
           script: |
             cd /var/www/crypto-tracker
             docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --force-recreate
+            docker compose -f docker-compose.prod.yml -f docker-compose.override.yml up -d --force-recreate
             docker exec crypto-tracker-app php artisan migrate --force
