@@ -13,10 +13,19 @@ RUN npm run build
 # -----------------------------
 # Stage 2: build php + vendor
 # -----------------------------
-FROM php:8.3-fpm AS php-build
+FROM php:8.3-fpm-alpine AS php-build
 # Installing dependencies
-RUN apk add --no-cache git unzip libpq libpq-dev oniguruma-dev pkgconfig \
-  && docker-php-ext-install bcmath mbstring pdo_pgsql \
+RUN apk add --no-cache \
+      git \
+      unzip \
+      postgresql-dev \
+      oniguruma-dev \
+      pkgconfig \
+      build-base \
+  && docker-php-ext-install \
+      bcmath \
+      mbstring \
+      pdo_pgsql \
   && pecl install redis \
   && docker-php-ext-enable redis
 
