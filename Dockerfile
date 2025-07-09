@@ -31,6 +31,13 @@ RUN apt-get update \
  && docker-php-ext-enable redis \
  && rm -rf /var/lib/apt/lists/*
 
+COPY --from=php:8.3-fpm /usr/local/etc/php/php.ini-production /usr/local/etc/php/php.ini
+
+COPY docker/php-config/custom.ini        /usr/local/etc/php/conf.d/custom.ini
+COPY docker/php-config/opcache.ini       /usr/local/etc/php/conf.d/opcache.ini
+
+COPY docker/php-config/www.conf          /usr/local/etc/php-fpm.d/www.conf
+
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -42,6 +49,11 @@ COPY --from=node-build /var/www/public /var/www/public
 # We build vendor, reset rights
 RUN composer install --no-dev --optimize-autoloader --prefer-dist \
   && chown -R www-data:www-data storage bootstrap/cache
+
+USER www-data
+RUN php artisan config:cache \
+ && php artisan route:cache \
+ && php artisan view:cache
 
 EXPOSE 9000
 CMD ["php-fpm"]
