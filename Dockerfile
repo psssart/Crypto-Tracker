@@ -50,12 +50,9 @@ COPY --from=node-build /var/www/public /var/www/public
 RUN composer install --no-dev --optimize-autoloader --prefer-dist \
   && chown -R www-data:www-data storage bootstrap/cache
 
-USER www-data
-RUN php artisan config:cache \
- && php artisan route:cache \
- && php artisan view:cache
-
 EXPOSE 9000
+
+ENTRYPOINT ["sh", "-c", "php artisan config:cache && php artisan route:cache && php artisan view:cache && php-fpm"]
 CMD ["php-fpm"]
 
 
@@ -63,6 +60,7 @@ CMD ["php-fpm"]
 # Stage 3: site на nginx
 # -----------------------------
 FROM nginx:alpine AS site
+ARG IMAGE_TAG
 LABEL version="${IMAGE_TAG}"
 # Copy config into nginx
 COPY ./nginx/default.conf /etc/nginx/conf.d/default.conf
