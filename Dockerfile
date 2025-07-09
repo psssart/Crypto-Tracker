@@ -46,6 +46,8 @@ WORKDIR /var/www
 COPY --from=node-build /var/www        /var/www
 COPY --from=node-build /var/www/public /var/www/public
 
+COPY .env /var/www/.env
+
 # We build vendor, reset rights
 RUN composer install --no-dev --optimize-autoloader --prefer-dist \
   && chown -R www-data:www-data storage bootstrap/cache
@@ -68,5 +70,3 @@ LABEL version="${IMAGE_TAG}"
 COPY ./nginx/default.conf /etc/nginx/conf.d/default.conf
 # Copy only public from php-build
 COPY --from=php-build /var/www/public /var/www/public
-
-# maybe .ENV variables
