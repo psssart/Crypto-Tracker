@@ -33,10 +33,10 @@ RUN apt-get update \
 
 COPY --from=php:8.3-fpm /usr/local/etc/php/php.ini-production /usr/local/etc/php/php.ini
 
-COPY docker/php-config/custom.ini        /usr/local/etc/php/conf.d/custom.ini
-COPY docker/php-config/opcache.ini       /usr/local/etc/php/conf.d/opcache.ini
+COPY php-config/custom.ini        /usr/local/etc/php/conf.d/custom.ini
+COPY php-config/opcache.ini       /usr/local/etc/php/conf.d/opcache.ini
 
-COPY docker/php-config/www.conf          /usr/local/etc/php-fpm.d/www.conf
+COPY php-config/www.conf          /usr/local/etc/php-fpm.d/www.conf
 
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
