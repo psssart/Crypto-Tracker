@@ -47,7 +47,7 @@ COPY --from=node-build /var/www        /var/www
 COPY --from=node-build /var/www/public /var/www/public
 
 # We build vendor, reset rights
-RUN composer install --no-dev --optimize-autoloader --prefer-dist \
+RUN composer install --no-dev --optimize-autoloader --prefer-dist --apcu-autoloader \
   && chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 9000
