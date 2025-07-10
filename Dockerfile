@@ -66,5 +66,3 @@ LABEL version="${IMAGE_TAG}"
 COPY ./nginx/default.conf /etc/nginx/conf.d/default.conf
 # Copy only public from php-build
 COPY --from=php-build /var/www/public /var/www/public
-
-# maybe .ENV variables
