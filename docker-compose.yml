@@ -1,20 +1,25 @@
-version: '3.8'
 services:
     app:
         build:
             context: .
-            dockerfile: Dockerfile
+            dockerfile: dev.Dockerfile
         image: crypto-tracker-app:dev
         container_name: crypto-tracker-app
         working_dir: /var/www
         volumes:
+            - ./crypto-tracker:/var/www:cached
             - ./crypto-tracker:/var/www
             - ./.env:/var/www/.env
         env_file:
             - .env
+        environment:
+            XDEBUG_MODE: debug,develop
+            XDEBUG_CONFIG: client_host=host.docker.internal
         depends_on:
             - db
             - redis
+        ports:
+            - "9003:9003"
 
     nginx:
         image: nginx:alpine
@@ -50,7 +55,7 @@ services:
     worker:
         build:
             context: .
-            dockerfile: Dockerfile
+            dockerfile: dev.Dockerfile
         image: crypto-tracker-worker:dev
         container_name: crypto-tracker-worker
         working_dir: /var/www
@@ -60,7 +65,9 @@ services:
                    --tries=3
                    --timeout=90"
         volumes:
-            - ./crypto-tracker:/var/www
+            - ./crypto-tracker:/var/www:cached
+            - vendor:/var/www/vendor
+            - ./.env:/var/www/.env
         env_file:
             - .env
         depends_on:
@@ -69,3 +76,4 @@ services:
 
 volumes:
     pgdata:
+    vendor:
