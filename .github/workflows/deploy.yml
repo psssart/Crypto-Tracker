@@ -42,6 +42,7 @@ jobs:
           context: .
           target: php-build
           push: false
+          load: true
           tags: ${{ env.IMAGE_NAME_APP }}:${{ env.IMAGE_TAG }}
           build-args: |
             IMAGE_TAG=${{ env.IMAGE_TAG }}
@@ -71,6 +72,7 @@ jobs:
           context: .
           target: site
           push: false
+          load: true
           tags: ${{ env.IMAGE_NAME_NGINX }}:${{ env.IMAGE_TAG }}
           build-args: |
             IMAGE_TAG=${{ env.IMAGE_TAG }}
