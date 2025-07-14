@@ -52,6 +52,16 @@ RUN composer install --no-dev --optimize-autoloader --prefer-dist --apcu-autoloa
 
 EXPOSE 9000
 
+RUN apt-get purge -y --auto-remove build-essential git pkg-config \
+ && rm -rf /var/lib/apt/lists/*
+
+# Create user
+RUN addgroup -g 1000 appuser \
+ && adduser -u 1000 -G appuser -s /bin/sh -D appuser \
+ && chown -R appuser:appuser /var/www
+
+USER appuser
+
 ENTRYPOINT ["sh", "-c", "php artisan config:cache && php artisan route:cache && php artisan view:cache && php-fpm"]
 CMD ["php-fpm"]
 
@@ -64,5 +74,10 @@ ARG IMAGE_TAG
 LABEL version="${IMAGE_TAG}"
 # Copy config into nginx
 COPY ./nginx/default.conf /etc/nginx/conf.d/default.conf
+
+RUN apk del --no-cache bash curl
 # Copy only public from php-build
 COPY --from=php-build /var/www/public /var/www/public
+
+RUN chown -R www-data:www-data /var/www/public
+USER www-data

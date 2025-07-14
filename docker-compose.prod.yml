@@ -1,5 +1,13 @@
 services:
   app:
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/www/storage
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ ALL ]
+    cap_add: [ CHOWN, SETUID, SETGID ]
     image: pasubi/crypto-tracker-app:${IMAGE_TAG}
     container_name: crypto-tracker-app
     env_file:
@@ -47,6 +55,13 @@ services:
       - "6379:6379"
 
   nginx:
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ ALL ]
+    cap_add: [ CHOWN, SETUID, SETGID ]
     build:
       context: .
       dockerfile: Dockerfile
