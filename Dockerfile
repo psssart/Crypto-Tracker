@@ -56,8 +56,8 @@ RUN apt-get purge -y --auto-remove build-essential git pkg-config \
  && rm -rf /var/lib/apt/lists/*
 
 # Create user
-RUN addgroup -g 1000 appuser \
- && adduser -u 1000 -G appuser -s /bin/sh -D appuser \
+RUN groupadd -g 1000 appuser \
+ && useradd  -u 1000 -g appuser -s /bin/sh -M appuser \
  && chown -R appuser:appuser /var/www
 
 USER appuser
