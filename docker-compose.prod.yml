@@ -55,6 +55,7 @@ services:
       - "6379:6379"
 
   nginx:
+    image: pasubi/crypto-tracker-nginx:latest
     read_only: true
     tmpfs:
       - /var/cache/nginx
@@ -62,10 +63,6 @@ services:
       - no-new-privileges:true
     cap_drop: [ ALL ]
     cap_add: [ CHOWN, SETUID, SETGID ]
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: site
     container_name: crypto-tracker-nginx
     ports:
       - "8080:80"
