@@ -93,5 +93,5 @@ RUN apk del --no-cache bash curl
 # Copy only public from php-build
 COPY --from=runtime /var/www/public /var/www/public
 
-RUN chown -R www-data:www-data /var/www/public
-USER www-data
+RUN chown -R nginx:nginx /var/www/public
+USER nginx
