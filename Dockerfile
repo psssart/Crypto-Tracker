@@ -14,6 +14,12 @@ RUN npm run build
 # Stage 2: build php + vendor
 # -----------------------------
 FROM php:8.3-fpm AS php-build
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      --only-upgrade zlib1g \
+ && rm -rf /var/lib/apt/lists/*
+
 # Installing dependencies
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
