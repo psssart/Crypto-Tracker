@@ -91,7 +91,7 @@ COPY ./nginx/default.conf /etc/nginx/conf.d/default.conf
 RUN apk del --no-cache bash curl
 
 # Copy only public from php-build
-COPY --from=php-runtime /var/www/public /var/www/public
+COPY --from=runtime /var/www/public /var/www/public
 
 RUN chown -R www-data:www-data /var/www/public
 USER www-data
