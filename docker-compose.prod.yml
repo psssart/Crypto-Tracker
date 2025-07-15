@@ -3,7 +3,12 @@ services:
     read_only: true
     tmpfs:
       - /tmp
-      - /var/www/storage:uid=82,gid=82,mode=1777
+      # Laravel View Cache
+      - /var/www/storage/framework/views:uid=82,gid=82,mode=1777
+      # Laravel Cache (config, route)
+      - /var/www/storage/framework/cache:uid=82,gid=82,mode=1777
+      # Bootstrap Cache (config.php, routes.php...)
+      - /var/www/bootstrap/cache:uid=82,gid=82,mode=1777
     security_opt:
       - no-new-privileges:true
     cap_drop: [ ALL ]
