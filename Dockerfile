@@ -72,7 +72,8 @@ COPY php-config/www.conf    /usr/local/etc/php-fpm.d/www.conf
 COPY --from=php-build /var/www        /var/www
 COPY --from=php-build /var/www/public /var/www/public
 
-RUN chown -R www-data:www-data /var/www
+RUN mkdir -p /var/www/storage/logs \
+ && chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 USER www-data
 
 ENTRYPOINT ["sh", "-c", "php artisan config:cache && php artisan route:cache && php artisan view:cache && php-fpm"]
@@ -93,5 +94,11 @@ RUN apk del --no-cache bash curl
 # Copy only public from php-build
 COPY --from=runtime /var/www/public /var/www/public
 
-RUN chown -R nginx:nginx /var/www/public
-USER nginx
+RUN mkdir -p \
+      /var/cache/nginx/client_temp \
+      /var/cache/nginx/proxy_temp \
+      /var/cache/nginx/fastcgi_temp \
+ && chown -R nginx:nginx /var/cache/nginx \
+ && chown -R nginx:nginx /var/www/public
+#RUN chown -R nginx:nginx /var/www/public
+#USER nginx
