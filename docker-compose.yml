@@ -19,6 +19,7 @@ services:
             - db
             - redis
         ports:
+            - "9000:9000"
             - "9003:9003"
 
     nginx:
