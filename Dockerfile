@@ -91,7 +91,10 @@ RUN mkdir -p /var/www/storage/logs \
  && chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 USER www-data
 
-ENTRYPOINT ["sh", "-c", "php artisan config:cache && php artisan route:cache && php artisan view:cache && php-fpm"]
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint
+RUN chmod +x /usr/local/bin/docker-entrypoint
+
+ENTRYPOINT ["docker-entrypoint"]
 CMD ["php-fpm"]
 
 # -----------------------------

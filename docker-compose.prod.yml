@@ -26,6 +26,7 @@ services:
   worker:
     image: pasubi/crypto-tracker-app:${IMAGE_TAG}
     container_name: crypto-tracker-worker
+    entrypoint: []
     command: >
       sh -c "php artisan queue:work redis
              --sleep=3
