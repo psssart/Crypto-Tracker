@@ -72,9 +72,17 @@ COPY php-config/www.conf    /usr/local/etc/php-fpm.d/www.conf
 COPY --from=php-build /var/www        /var/www
 COPY --from=php-build /var/www/public /var/www/public
 
-RUN apk add --no-cache postgresql-dev \
- && docker-php-ext-install pdo_pgsql \
- && apk del postgresql-dev
+RUN apk add --no-cache --virtual .build-deps \
+      $PHPIZE_DEPS \
+      postgresql-dev \
+      oniguruma-dev \
+ && pecl install redis \
+ && docker-php-ext-install \
+      pdo_pgsql \
+      mbstring \
+      bcmath \
+ && docker-php-ext-enable redis \
+ && apk del .build-deps
 
 RUN mkdir -p /var/www/storage/logs \
  && chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
