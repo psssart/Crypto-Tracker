@@ -33,11 +33,6 @@ RUN apt-get update \
 
 COPY --from=php:8.3-fpm /usr/local/etc/php/php.ini-production /usr/local/etc/php/php.ini
 
-COPY php-config/custom.ini        /usr/local/etc/php/conf.d/custom.ini
-COPY php-config/opcache.ini       /usr/local/etc/php/conf.d/opcache.ini
-
-COPY php-config/www.conf          /usr/local/etc/php-fpm.d/www.conf
-
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -50,19 +45,77 @@ COPY --from=node-build /var/www/public /var/www/public
 RUN composer install --no-dev --optimize-autoloader --prefer-dist --apcu-autoloader \
   && chown -R www-data:www-data storage bootstrap/cache
 
-EXPOSE 9000
+RUN apt-get purge -y --auto-remove build-essential git pkg-config \
+ && rm -rf /var/lib/apt/lists/*
 
-ENTRYPOINT ["sh", "-c", "php artisan config:cache && php artisan route:cache && php artisan view:cache && php-fpm"]
-CMD ["php-fpm"]
+# Create user
+RUN groupadd -g 1000 appuser \
+ && useradd  -u 1000 -g appuser -s /bin/sh -M appuser \
+ && chown -R appuser:appuser /var/www
 
+USER appuser
 
 # -----------------------------
-# Stage 3: site на nginx
+# Stage 3: minimal runtime
+# -----------------------------
+FROM php:8.3-fpm-alpine AS runtime
+ARG IMAGE_TAG
+
+WORKDIR /var/www
+
+RUN cp /usr/local/etc/php/php.ini-production /usr/local/etc/php/php.ini
+
+COPY php-config/custom.ini  /usr/local/etc/php/conf.d/custom.ini
+COPY php-config/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+COPY php-config/www.conf    /usr/local/etc/php-fpm.d/www.conf
+
+COPY --from=php-build /var/www        /var/www
+COPY --from=php-build /var/www/public /var/www/public
+
+RUN apk add --no-cache --virtual .build-deps \
+      $PHPIZE_DEPS \
+      postgresql-dev \
+      oniguruma-dev \
+ && docker-php-ext-install \
+      pdo_pgsql \
+      mbstring \
+      bcmath \
+ && pecl install redis \
+ && docker-php-ext-enable redis \
+ && apk add --no-cache \
+      postgresql-libs \
+      oniguruma \
+ && apk del .build-deps
+
+RUN mkdir -p /var/www/storage/logs \
+ && chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+USER www-data
+
+COPY --chmod=0755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint
+
+ENTRYPOINT ["docker-entrypoint"]
+CMD ["php-fpm"]
+
+# -----------------------------
+# Stage 4: site на nginx
 # -----------------------------
 FROM nginx:alpine AS site
 ARG IMAGE_TAG
 LABEL version="${IMAGE_TAG}"
+
 # Copy config into nginx
 COPY ./nginx/default.conf /etc/nginx/conf.d/default.conf
+
+RUN apk del --no-cache bash curl
+
 # Copy only public from php-build
-COPY --from=php-build /var/www/public /var/www/public
+COPY --from=runtime /var/www/public /var/www/public
+
+RUN mkdir -p \
+      /var/cache/nginx/client_temp \
+      /var/cache/nginx/proxy_temp \
+      /var/cache/nginx/fastcgi_temp \
+ && chown -R nginx:nginx /var/cache/nginx \
+ && chown -R nginx:nginx /var/www/public
+#RUN chown -R nginx:nginx /var/www/public
+#USER nginx

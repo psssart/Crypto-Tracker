@@ -1,5 +1,18 @@
 services:
   app:
+    read_only: true
+    tmpfs:
+      - /tmp
+      # Laravel View Cache
+      - /var/www/storage/framework/views:uid=82,gid=82,mode=1777
+      # Laravel Cache (config, route)
+      - /var/www/storage/framework/cache:uid=82,gid=82,mode=1777
+      # Bootstrap Cache (config.php, routes.php...)
+      - /var/www/bootstrap/cache:uid=82,gid=82,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ ALL ]
+    cap_add: [ CHOWN, SETUID, SETGID ]
     image: pasubi/crypto-tracker-app:${IMAGE_TAG}
     container_name: crypto-tracker-app
     env_file:
@@ -13,6 +26,7 @@ services:
   worker:
     image: pasubi/crypto-tracker-app:${IMAGE_TAG}
     container_name: crypto-tracker-worker
+    entrypoint: []
     command: >
       sh -c "php artisan queue:work redis
              --sleep=3
@@ -47,10 +61,15 @@ services:
       - "6379:6379"
 
   nginx:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: site
+    image: pasubi/crypto-tracker-nginx:${IMAGE_TAG}
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /run
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ ALL ]
+    cap_add: [ CHOWN, SETUID, SETGID ]
     container_name: crypto-tracker-nginx
     ports:
       - "8080:80"

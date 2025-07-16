@@ -36,18 +36,56 @@ jobs:
       - name: Clear Docker buildx cache (if needed)
         run: docker builder prune -af || true
 
-      - name: Build & Push app image
+      - name: Build app image (without push)
         uses: docker/build-push-action@v5
         with:
           context: .
-          target: php-build
-          push:       true
-          tags:       ${{ env.IMAGE_NAME_APP }}:${{ env.IMAGE_TAG }}
+          target: runtime
+          push: false
+          load: true
+          tags: ${{ env.IMAGE_NAME_APP }}:${{ env.IMAGE_TAG }}
           build-args: |
             IMAGE_TAG=${{ env.IMAGE_TAG }}
-          platforms:  linux/amd64
+          platforms: linux/amd64
 
-      - name: Build & Push nginx image
+      - name: Scan app image for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_NAME_APP }}:${{ env.IMAGE_TAG }}
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+      - name: Push app image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: runtime
+          push: true
+          tags: ${{ env.IMAGE_NAME_APP }}:${{ env.IMAGE_TAG }}
+          build-args: |
+            IMAGE_TAG=${{ env.IMAGE_TAG }}
+          platforms: linux/amd64
+
+      - name: Build nginx image (without push)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: site
+          push: false
+          load: true
+          tags: ${{ env.IMAGE_NAME_NGINX }}:${{ env.IMAGE_TAG }}
+          build-args: |
+            IMAGE_TAG=${{ env.IMAGE_TAG }}
+          platforms: linux/amd64
+
+      - name: Scan nginx image for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_NAME_NGINX }}:${{ env.IMAGE_TAG }}
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+      - name: Push nginx image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -70,8 +108,9 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 6969
           script: |
             cd /var/www/crypto-tracker
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --force-recreate
+            docker compose pull
+            docker compose up -d --force-recreate
             docker exec crypto-tracker-app php artisan migrate --force
