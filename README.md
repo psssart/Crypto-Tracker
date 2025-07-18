@@ -31,16 +31,22 @@ A Laravel 12 + Breeze application, containerized with Docker (PHP-FPM, Nginx, Po
     ```bash
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout certs\localhost.key -out certs\localhost.crt -subj "/CN=localhost"
     ```
-4. **Run Docker Desktop**
+3. **Run Docker Desktop**
 
-
-5. **Build & start all services**
-    ```bash
-   docker-compose up -d --build
+4. **Build vendor**
+   ```bash
+   docker-compose run --rm app composer install --no-interaction --optimize-autoloader
    ```
-6. **Run Vite in Laravel app root**
+4. **Start all services**
+    ```bash
+   docker-compose up -d
+   ```
+5. **Run Vite in Laravel app root**
     ```bash
     cd ./crypto-tracker
+   ```
+   ```bash
+   npm install
    ```
     ```bash
    npm run dev
