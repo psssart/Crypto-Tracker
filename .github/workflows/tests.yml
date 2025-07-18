@@ -40,5 +40,16 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 'lts/*'
+
+      - name: Install NPM dependencies
+        run: npm ci
+
+      - name: Build assets (Vite)
+        run: npm run build
+
       - name: Run tests
         run: php artisan test --env=testing --ansi

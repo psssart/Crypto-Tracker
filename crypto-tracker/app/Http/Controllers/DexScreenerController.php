@@ -95,7 +95,7 @@ class DexScreenerController extends Controller
             return response()->json($profiles, 200);
         } catch (ApiResponseException $e) {
             return response()->json([
-                'error'   => 'Could not tokens with most active boosts',
+                'error'   => 'Could not fetch tokens with most active boosts',
                 'message' => $e->getMessage(),
             ], $e->getCode() ?: 500);
         }
