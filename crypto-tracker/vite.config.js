@@ -3,7 +3,7 @@ import laravel from 'laravel-vite-plugin';
 import react from '@vitejs/plugin-react';
 import fs from 'fs';
 
-const isDevServer = process.env.NODE_ENV !== 'production';
+const isDevServer = process.env.APP_ENV !== 'production';
 const isDocker = process.env.VITE_HTTPS === 'true';
 
 // Dev server settings depending on the environment

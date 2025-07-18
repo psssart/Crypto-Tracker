@@ -30,16 +30,27 @@ A Laravel 12 + Breeze application, containerized with Docker (PHP-FPM, Nginx, Po
 2. **Generate a self-signed SSL certificate**
     ```bash
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout certs\localhost.key -out certs\localhost.crt -subj "/CN=localhost"
+    ```
+3. **Run Docker Desktop**
 
-4. **Run Docker Desktop**
-
-5. **Build & start all services**
+4. **Build vendor**
+   ```bash
+   docker-compose run --rm app composer install --no-interaction --optimize-autoloader
+   ```
+4. **Start all services**
     ```bash
-   docker-compose up -d --build
-
-6. **Run Vite in Laravel app root**(./crypto-tracker)
+   docker-compose up -d
+   ```
+5. **Run Vite in Laravel app root**
+    ```bash
+    cd ./crypto-tracker
+   ```
+   ```bash
+   npm install
+   ```
     ```bash
    npm run dev
+   ```
 ---
 
 ## ✅ Quick Health Checks
@@ -75,13 +86,13 @@ docker-compose exec app php artisan tinker
 
 ## 🔧 Frontend (Vite + React)
 
-- Dev server runs on https://localhost:5173
+- Dev server runs on http://localhost:5173
 - HMR over WSS enabled via self-signed certs 
 - Assets are injected automatically by the Laravel Breeze plugin
 
 Open your browser at:
 - *App:* https://localhost
-- *Vite:* https://localhost:5173
+- *Vite:* http://localhost:5173
 
 ---
 
@@ -90,12 +101,11 @@ Open your browser at:
 # Stop & remove all containers
 docker-compose down
 
-# Rebuild PHP or Vite services only
+# Rebuild PHP service only
 docker-compose up -d --build app
-docker-compose up -d --build vite
 
 # View logs (follow)
 docker-compose logs -f app
 docker-compose logs -f nginx
-docker-compose logs -f vite
+docker-compose logs -f worker
 ```

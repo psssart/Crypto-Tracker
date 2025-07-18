@@ -1,5 +1,5 @@
 # Dockerfile
-FROM php:8.1-fpm-alpine
+FROM php:8.3-fpm-alpine
 
 # 1) Install system dependencies
 RUN apk update \
@@ -14,7 +14,9 @@ RUN apk update \
     git \
     curl \
     nodejs \
-    npm
+    npm \
+    postgresql-dev \
+ && rm -rf /var/cache/apk/*
 
 # 2) Install & enable PHP extensions
 RUN docker-php-ext-install \
@@ -33,14 +35,17 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # 4) Set working directory
 WORKDIR /var/www
 
-# 5) Copy application source
-COPY . /var/www
+# 5) Only copy composer files → install
+COPY crypto-tracker/composer.json crypto-tracker/composer.lock* ./
 
 # 6) Install PHP dependencies
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 
-# 7) Expose FPM port
+# 7) Copy the rest of the app
+COPY crypto-tracker/ ./
+
+# 8) Expose FPM port
 EXPOSE 9000
 
-# 8) Default to PHP-FPM
+# 9) Default to PHP-FPM
 CMD ["php-fpm"]

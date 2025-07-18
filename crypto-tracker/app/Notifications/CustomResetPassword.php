@@ -11,7 +11,7 @@ class CustomResetPassword extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    protected string $token;
+    public string $token;
 
     /**
      * Create a new notification instance.
