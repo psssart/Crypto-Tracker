@@ -32,14 +32,9 @@ A Laravel 12 + Breeze application, containerized with Docker (PHP-FPM, Nginx, Po
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout certs\localhost.key -out certs\localhost.crt -subj "/CN=localhost"
     ```
 3. **Run Docker Desktop**
-
-4. **Build vendor**
-   ```bash
-   docker-compose run --rm app composer install --no-interaction --optimize-autoloader
-   ```
-4. **Start all services**
+4. **Build & Start all services**
     ```bash
-   docker-compose up -d
+   docker-compose up -d --build
    ```
 5. **Run Vite in Laravel app root**
     ```bash
@@ -72,6 +67,16 @@ Run all outstanding migrations:
 docker-compose exec app php artisan migrate
 ```
 
+Run all seeds:
+```bash
+docker-compose exec app php artisan db:seed --force
+```
+
+Seed only a specific class:
+```bash
+docker-compose exec app php artisan db:seed --class=LocalAdminSeeder --force
+```
+
 ---
 
 ## 🔄 Check Redis Connection
@@ -100,6 +105,9 @@ Open your browser at:
 ```bash
 # Stop & remove all containers
 docker-compose down
+
+# Stop & remove all containers with database tome
+docker-compose down -v
 
 # Rebuild PHP service only
 docker-compose up -d --build app

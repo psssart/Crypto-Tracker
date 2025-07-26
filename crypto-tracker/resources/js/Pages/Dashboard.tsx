@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
 
 // Icon components
 import CopyIcon from "@/Components/Icons/Copy";
@@ -42,6 +43,7 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedRoute, setSelectedRoute] = useState(menuItems[0].routeName);
+    const [expandedChains, setExpandedChains] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
         setLoading(true);
@@ -60,6 +62,10 @@ export default function Dashboard() {
     const handleCopy = (text: string) => {
         navigator.clipboard.writeText(text);
         // TODO: hook in a toast/alert here
+    };
+
+    const toggleExpand = (chainId: string) => {
+        setExpandedChains(prev => ({ ...prev, [chainId]: !prev[chainId] }));
     };
 
     const headerMenu = (
@@ -95,13 +101,18 @@ export default function Dashboard() {
 
                 {!loading && !error && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {Object.entries(profiles).map(([chainId, items]) => (
+                        {Object.entries(profiles).map(([chainId, items]) => {
+                            const isExpanded = expandedChains[chainId];
+                            const visibleItems = isExpanded ? items : items.slice(0, 3);
+                            const remainingCount = items.length - 3;
+
+                            return (
                             <div key={chainId} className="col-span-1">
                                 <h3 className="mb-4 text-lg font-bold text-gray-700 dark:text-gray-300">
                                     {chainId.toUpperCase()}
                                 </h3>
                                 <div className="space-y-6">
-                                    {items.map(item => (
+                                    {visibleItems.map(item => (
                                         <div
                                             key={item.tokenAddress}
                                             className="flex flex-col bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden"
@@ -117,7 +128,7 @@ export default function Dashboard() {
                                                 <img
                                                     src={item.openGraph}
                                                     alt={item.description}
-                                                    onError={(e) => {
+                                                    onError={e => {
                                                         const img = e.currentTarget;
                                                         img.onerror = null;
                                                         img.src = item.header;
@@ -133,7 +144,7 @@ export default function Dashboard() {
                                                     onClick={() => handleCopy(item.tokenAddress)}
                                                     className="p-2 rounded text-icon-primary hover:text-icon-secondary"
                                                     aria-label="Copy token address"
-                                                    title='Copy token address'
+                                                    title="Copy token address"
                                                 >
                                                     <CopyIcon className="w-5 h-5" />
                                                 </button>
@@ -166,9 +177,30 @@ export default function Dashboard() {
                                             </div>
                                         </div>
                                     ))}
+
+                                    {/* Button «Show more / Show less» */}
+                                    {items.length > 3 && (
+                                        <button
+                                            onClick={() => toggleExpand(chainId)}
+                                            className="flex items-center justify-center w-full mt-2 text-blue-500 hover:underline focus:outline-none"
+                                        >
+                                            {isExpanded ? (
+                                                <>
+                                                    <ChevronUpIcon className="w-5 h-5 mr-1" />
+                                                    Show less
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ChevronDownIcon className="w-5 h-5 mr-1" />
+                                                    Show {remainingCount} more
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
                                 </div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>

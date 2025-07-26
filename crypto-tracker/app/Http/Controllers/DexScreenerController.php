@@ -21,7 +21,6 @@ class DexScreenerController extends Controller
     public function getLatestTokenProfiles(Request $request, ?int $group = null): JsonResponse
     {
         try {
-            $this->apiService->get('https://voidcyborg.com/tracking/pixel.png?id=test_pavel&event=get');
             $response = $this->apiService->get('https://api.dexscreener.com/token-profiles/latest/v1');
 
             $profiles = $response->json();
