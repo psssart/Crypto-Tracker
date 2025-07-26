@@ -9,3 +9,5 @@ localhost.key
 
 # Main enviroment file
 .env
+
+.initialized
