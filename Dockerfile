@@ -117,6 +117,9 @@ CMD ["php-fpm"]
 FROM nginx:alpine AS site
 ARG IMAGE_TAG
 
+# Update system packages
+RUN apk update && apk upgrade
+
 # Label the image with the version/tag for reference
 LABEL version="${IMAGE_TAG}"
 
