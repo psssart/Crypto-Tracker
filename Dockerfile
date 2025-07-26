@@ -70,6 +70,9 @@ USER appuser
 FROM php:8.3-fpm-alpine AS runtime
 ARG IMAGE_TAG
 
+# Update system packages
+RUN apk update && apk upgrade
+
 WORKDIR /var/www
 
 # Copy production PHP config
