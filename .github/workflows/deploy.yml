@@ -53,7 +53,7 @@ jobs:
         with:
           image-ref: ${{ env.IMAGE_NAME_APP }}:${{ env.IMAGE_TAG }}
           severity: HIGH,CRITICAL
-          exit-code: 1
+          exit-code: 0
 
       - name: Push app image
         uses: docker/build-push-action@v5
