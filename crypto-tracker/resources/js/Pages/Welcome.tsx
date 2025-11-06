@@ -46,7 +46,7 @@ export default function Welcome({ auth }: PageProps) {
 
                 {/* Description */}
                 <div className="mb-12 px-4 text-center max-w-2xl text-lg font-medium text-white/90">
-                    Отслеживайте криптовалютные транзакции, связи между кошельками и аналитику в реальном времени. Уведомления, графики и мимикрия действий — всё в одном месте.
+                    Track crypto transactions, wallet links, and real-time analytics — with alerts, charts, and action mirroring all in one place.
                 </div>
             </div>
         </>
