@@ -5,6 +5,8 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider, initializeTheme } from './lib/theme-provider';
+import AppLayout from './Layouts/AppLayout';
+import type { ReactNode } from 'react';
 
 initializeTheme();
 
@@ -16,14 +18,23 @@ createInertiaApp({
         resolvePageComponent(
             `./Pages/${name}.tsx`,
             import.meta.glob('./Pages/**/*.tsx'),
-        ),
+        ).then((module: any) => {
+            const page = module.default;
+
+            page.layout ??= (pageEl: ReactNode) => (
+                <AppLayout>{pageEl}</AppLayout>
+            );
+
+            return page;
+        }),
     setup({ el, App, props }) {
         const root = createRoot(el);
 
         root.render(
-        <ThemeProvider>
-            <App {...props} />
-        </ThemeProvider>);
+            <ThemeProvider>
+                <App {...props} />
+            </ThemeProvider>,
+        );
     },
     progress: {
         color: '#4B5563',

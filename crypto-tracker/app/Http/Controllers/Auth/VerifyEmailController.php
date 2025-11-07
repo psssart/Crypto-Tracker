@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class VerifyEmailController extends Controller
@@ -18,7 +18,6 @@ class VerifyEmailController extends Controller
     {
         $user = User::findOrFail($id);
 
-        // hash = sha1($user->getEmailForVerification())
         if (! hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
             abort(403, 'Invalid verification link.');
         }
@@ -29,8 +28,11 @@ class VerifyEmailController extends Controller
             }
         }
 
-        Auth::login($user);
+        Auth::guard('web')->login($user);
+        $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false).'?verified=1');
+        return redirect()
+            ->route('dashboard')
+            ->with('success', 'Email confirmed');
     }
 }
