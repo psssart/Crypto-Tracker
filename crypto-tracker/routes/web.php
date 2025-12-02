@@ -32,6 +32,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->where('group', '[01]')->name('dex.getLatestBoostedTokens');
     Route::get('/most-boosted-tokens/{group?}', [DexScreenerController::class, 'getMostBoostedTokens'])
         ->where('group', '[01]')->name('dex.getMostBoostedTokens');
+
+    Route::get('/chart', function () {
+        return Inertia::render('Chart');
+    })->name('chart');
 });
 
 require __DIR__.'/auth.php';

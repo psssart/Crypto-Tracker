@@ -15,12 +15,20 @@ export default function Welcome({ auth }: PageProps) {
                 {/* Navigation */}
                 <div className="absolute top-6 right-6 flex gap-4">
                     {auth.user ? (
-                        <Link
-                            href={route('dashboard')}
-                            className="bg-white/80 text-black font-semibold px-4 py-2 rounded-lg hover:bg-white transition"
-                        >
-                            Dashboard
-                        </Link>
+                        <>
+                            <Link
+                                href={route('dashboard')}
+                                className="bg-white/80 text-black font-semibold px-4 py-2 rounded-lg hover:bg-white transition"
+                            >
+                                Dashboard
+                            </Link>
+                            <Link
+                                href={route('chart')}
+                                className="bg-white/80 text-black font-semibold px-4 py-2 rounded-lg hover:bg-white transition"
+                            >
+                                Chart
+                            </Link>
+                        </>
                     ) : (
                         <>
                             <Link
