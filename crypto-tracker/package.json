@@ -39,6 +39,7 @@
         "vite": "^6.2.4"
     },
     "dependencies": {
-        "@heroicons/react": "^2.2.0"
+        "@heroicons/react": "^2.2.0",
+        "lightweight-charts": "^5.0.9"
     }
 }

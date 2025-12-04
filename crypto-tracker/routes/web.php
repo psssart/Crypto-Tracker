@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\ChartController;
 use App\Http\Controllers\DexScreenerController;
+use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -22,16 +24,24 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/integrations', [IntegrationController::class, 'index'])->name('integrations.index');
+    Route::post('/integrations', [IntegrationController::class, 'store'])->name('integrations.store');
+    Route::patch('/integrations/{integration}', [IntegrationController::class, 'update'])->name('integrations.update');
+    Route::delete('/integrations/{integration}', [IntegrationController::class, 'destroy'])->name('integrations.destroy');
+    Route::post('/integrations/check', [IntegrationController::class, 'check'])->name('integrations.check');
+
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
-
     Route::get('/latest-token-profiles/{group?}', [DexScreenerController::class, 'getLatestTokenProfiles'])
         ->where('group', '[01]')->name('dex.latestTokenProfiles');
     Route::get('/latest-boosted-tokens/{group?}', [DexScreenerController::class, 'getLatestBoostedTokens'])
         ->where('group', '[01]')->name('dex.getLatestBoostedTokens');
     Route::get('/most-boosted-tokens/{group?}', [DexScreenerController::class, 'getMostBoostedTokens'])
         ->where('group', '[01]')->name('dex.getMostBoostedTokens');
+
+    Route::get('/chart', [ChartController::class, 'show'])->name('chart');
+    Route::post('/chart/check-source', [ChartController::class, 'checkSource'])->name('chart.checkSource');
 });
 
 require __DIR__.'/auth.php';

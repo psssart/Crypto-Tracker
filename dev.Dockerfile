@@ -29,28 +29,37 @@ RUN docker-php-ext-install \
       zip \
       xml \
       pcntl \
+      opcache \
  && pecl install redis \
  && docker-php-ext-enable redis
 
-# 3) Copy Composer from the official image
+# 3) Dev PHP settings: disable opcache so code changes are instant
+RUN { \
+  echo "opcache.enable=0"; \
+  echo "opcache.enable_cli=0"; \
+  echo "opcache.validate_timestamps=1"; \
+  echo "opcache.revalidate_freq=0"; \
+} > /usr/local/etc/php/conf.d/99-dev.ini
+
+# 4) Copy Composer from the official image
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# 4) Set working directory
+# 5) Set working directory
 WORKDIR /var/www
 
-# 5) Only copy composer files → install
+# 6) Only copy composer files → install
 COPY crypto-tracker/composer.json crypto-tracker/composer.lock* ./
 
-# 6) Install PHP dependencies
+# 7) Install PHP dependencies
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 
-# 7) Copy the rest of the app
+# 8) Copy the rest of the app
 COPY crypto-tracker/ ./
 
-# 8) Expose FPM port
+# 9) Expose FPM port
 EXPOSE 9000
 
-# 9) Use docker entrypoint
+# 10) Use docker entrypoint
  # Copy our custom entrypoint script into the container and make it executable
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
@@ -58,5 +67,5 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
  # Use the entrypoint script to bootstrap the container (migrations, seeding, etc.)
 ENTRYPOINT ["docker-entrypoint.sh"]
 
-# 10) Default to PHP-FPM
+# 11) Default to PHP-FPM
 CMD ["php-fpm"]

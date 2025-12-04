@@ -58,6 +58,12 @@ export default function Authenticated({
                                 >
                                     Dashboard
                                 </NavLink>
+                                <NavLink
+                                    href={route('chart')}
+                                    active={route().current('chart')}
+                                >
+                                    Chart
+                                </NavLink>
                             </div>
                         </div>
 
@@ -93,6 +99,11 @@ export default function Authenticated({
                                             href={route('profile.edit')}
                                         >
                                             Profile
+                                        </Dropdown.Link>
+                                        <Dropdown.Link
+                                            href={route('integrations.index')}
+                                        >
+                                            Integrations
                                         </Dropdown.Link>
                                         <Dropdown.Link
                                             href={route('logout')}
