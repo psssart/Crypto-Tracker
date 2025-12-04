@@ -19,6 +19,7 @@ return [
             'health_check' => [
                 'enabled' => true,
             ],
+            'ws_source_id' => 'alltick',
         ],
 
         'freecryptoapi' => [
@@ -36,6 +37,7 @@ return [
             'health_check' => [
                 'enabled' => true,
             ],
+            'ws_source_id' => 'freecryptoapi',
         ],
 
         'bybit' => [
@@ -56,6 +58,7 @@ return [
             'health_check' => [
                 'enabled' => true,
             ],
+            'ws_source_id' => 'bybit',
         ],
 
     ],

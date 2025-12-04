@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ChartController;
 use App\Http\Controllers\DexScreenerController;
 use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\ProfileController;
@@ -39,9 +40,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/most-boosted-tokens/{group?}', [DexScreenerController::class, 'getMostBoostedTokens'])
         ->where('group', '[01]')->name('dex.getMostBoostedTokens');
 
-    Route::get('/chart', function () {
-        return Inertia::render('Chart');
-    })->name('chart');
+    Route::get('/chart', [ChartController::class, 'show'])->name('chart');
+    Route::post('/chart/check-source', [ChartController::class, 'checkSource'])->name('chart.checkSource');
 });
 
 require __DIR__.'/auth.php';

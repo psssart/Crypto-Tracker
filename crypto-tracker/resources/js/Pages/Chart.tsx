@@ -1,16 +1,17 @@
 // resources/js/Pages/Chart.tsx
+import React, { useMemo, useState } from 'react';
 import { Head } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import React, { useMemo, useState } from 'react';
 import {
     LiveWebSocketChart,
     ALL_WEB_SOCKET_SOURCES,
     WebSocketSourceConfig,
+    WebSocketSourceAuth,
 } from '@/Components/LiveWebSocketChart';
 
 type CoinOption = {
     label: string;
-    symbol: string; // e.g. BTCUSDT
+    symbol: string;
 };
 
 const COIN_OPTIONS: CoinOption[] = [
@@ -25,12 +26,41 @@ type DataSourceId = WebSocketSourceConfig['id'];
 
 const DEFAULT_SOURCE_ID: DataSourceId = 'binance';
 
-export default function Chart() {
+type SourceHealthStatus = 'unknown' | 'checking' | 'ok' | 'error';
+
+type SourceHealth = {
+    status: SourceHealthStatus;
+    message?: string;
+};
+
+type ChartProps = {
+    integrationBackedSourceIds: string[]; // e.g. ['alltick', 'freecryptoapi', 'bybit']
+    integrationsUrl: string;
+    sourceAuth?: Record<string, WebSocketSourceAuth>; // keyed by WS source id
+};
+
+export default function Chart({
+                                  integrationBackedSourceIds,
+                                  integrationsUrl,
+                                  sourceAuth = {},
+                              }: ChartProps) {
     const [selectedSymbol, setSelectedSymbol] = useState<string>(
         COIN_OPTIONS[0].symbol,
     );
     const [selectedSourceId, setSelectedSourceId] =
         useState<DataSourceId>(DEFAULT_SOURCE_ID);
+
+    const [health, setHealth] = useState<Record<string, SourceHealth>>({});
+
+    const csrfToken =
+        (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)
+            ?.content ?? '';
+
+    const isIntegrationBacked = (id: string): boolean =>
+        integrationBackedSourceIds.includes(id);
+
+    const getHealth = (id: string): SourceHealth =>
+        health[id] ?? { status: isIntegrationBacked(id) ? 'unknown' : 'ok' };
 
     const handleSymbolChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedSymbol(e.target.value);
@@ -48,29 +78,104 @@ export default function Chart() {
         [selectedSourceId],
     );
 
-    // Header with Dashboard-like data source tabs + coin selector
+    const selectedHealth = getHealth(selectedSourceId);
+    const selectedIsBacked = isIntegrationBacked(selectedSourceId);
+
+    const handleSourceClick = async (id: DataSourceId) => {
+        // Public (non-integration) sources can switch immediately
+        if (!isIntegrationBacked(id)) {
+            setSelectedSourceId(id);
+            return;
+        }
+
+        const current = getHealth(id);
+
+        if (current.status === 'ok') {
+            setSelectedSourceId(id);
+            return;
+        }
+
+        setHealth((prev) => ({
+            ...prev,
+            [id]: { status: 'checking' },
+        }));
+
+        try {
+            const response = await fetch(route('chart.checkSource'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({ ws_source_id: id }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.ok) {
+                setHealth((prev) => ({
+                    ...prev,
+                    [id]: { status: 'ok', message: data.message },
+                }));
+                setSelectedSourceId(id);
+            } else {
+                setHealth((prev) => ({
+                    ...prev,
+                    [id]: {
+                        status: 'error',
+                        message: data.message || 'Data source is not available.',
+                    },
+                }));
+            }
+        } catch {
+            setHealth((prev) => ({
+                ...prev,
+                [id]: {
+                    status: 'error',
+                    message: 'Failed to contact server for health check.',
+                },
+            }));
+        }
+    };
+
     const header = (
         <div className="space-y-4">
-            {/* Data source selector (tabs) */}
             <nav className="flex space-x-4 border-b border-gray-200 dark:border-gray-700">
-                {ALL_WEB_SOCKET_SOURCES.map((item) => (
-                    <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setSelectedSourceId(item.id as DataSourceId)}
-                        className={
-                            `px-4 py-2 -mb-px font-medium focus:outline-none ` +
-                            (selectedSourceId === item.id
-                                ? 'text-gray-900 dark:text-gray-100 border-b-2 border-blue-500'
-                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200')
-                        }
-                    >
-                        {item.label}
-                    </button>
-                ))}
+                {ALL_WEB_SOCKET_SOURCES.map((item) => {
+                    const h = getHealth(item.id);
+                    const isActive = selectedSourceId === item.id;
+                    const isBacked = isIntegrationBacked(item.id);
+
+                    return (
+                        <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => handleSourceClick(item.id as DataSourceId)}
+                            className={
+                                'px-4 py-2 -mb-px font-medium focus:outline-none ' +
+                                (isActive
+                                    ? 'border-b-2 border-blue-500 text-gray-900 dark:text-gray-100'
+                                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200')
+                            }
+                        >
+                            {item.label}
+                            {isBacked && h.status === 'ok' && (
+                                <span className="ml-2 text-xs text-green-500">●</span>
+                            )}
+                            {isBacked && h.status === 'error' && (
+                                <span className="ml-2 text-xs text-red-500">●</span>
+                            )}
+                            {isBacked && h.status === 'checking' && (
+                                <span className="ml-2 text-xs text-blue-500 animate-pulse">
+                                    ●
+                                </span>
+                            )}
+                        </button>
+                    );
+                })}
             </nav>
 
-            {/* Title + info + coin selector */}
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
                     <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
@@ -102,8 +207,27 @@ export default function Chart() {
                     </select>
                 </div>
             </div>
+
+            {selectedIsBacked && selectedHealth.status === 'error' && (
+                <div className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-100">
+                    <p>{selectedHealth.message ?? 'This data source is not available.'}</p>
+                    <p className="mt-1">
+                        Fix the API key on the{' '}
+                        <a
+                            href={integrationsUrl}
+                            className="font-medium underline"
+                        >
+                            Integrations page
+                        </a>
+                        .
+                    </p>
+                </div>
+            )}
         </div>
     );
+
+    const activeAuth: WebSocketSourceAuth =
+        sourceAuth[activeSource.id] ?? {};
 
     return (
         <AuthenticatedLayout header={header}>
@@ -127,6 +251,7 @@ export default function Chart() {
                                     symbol={selectedSymbol}
                                     height={420}
                                     source={activeSource}
+                                    auth={activeAuth}
                                 />
                             </div>
                         </div>

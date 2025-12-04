@@ -1,3 +1,4 @@
+// resources/js/Components/LiveWebSocketChart.tsx
 import React, { useEffect, useRef } from 'react';
 import {
     createChart,
@@ -15,6 +16,13 @@ export type LiveWebSocketTick = {
     value: number;
 };
 
+export type WebSocketSourceAuth = {
+    token?: string;   // e.g. AllTick token
+    apiKey?: string;  // e.g. FreeCryptoAPI key
+    apiSecret?: string; // e.g. Bybit secret (when you add WS for it)
+    [key: string]: unknown;
+};
+
 export type WebSocketSourceConfig = {
     /** Stable id, used in UI / state */
     id: 'binance' | 'alltick' | 'freecryptoapi' | (string & {});
@@ -22,10 +30,10 @@ export type WebSocketSourceConfig = {
     description?: string;
 
     /** Build the WebSocket URL for a symbol */
-    buildUrl: (symbol: string) => string;
+    buildUrl: (symbol: string, auth?: WebSocketSourceAuth) => string;
 
     /** Optional: send subscribe/auth messages when socket opens */
-    onOpen?: (socket: WebSocket, symbol: string) => void;
+    onOpen?: (socket: WebSocket, symbol: string, auth?: WebSocketSourceAuth) => void;
 
     /** Map raw WebSocket message → chart tick (or null to ignore) */
     parseMessage: (event: MessageEvent<any>) => LiveWebSocketTick | null;
@@ -39,12 +47,14 @@ type LiveWebSocketChartProps = {
     symbol: string;
     height?: number;
     source: WebSocketSourceConfig;
+    auth?: WebSocketSourceAuth;
 };
 
 export const LiveWebSocketChart: React.FC<LiveWebSocketChartProps> = ({
                                                                           symbol,
                                                                           height = 400,
                                                                           source,
+                                                                          auth,
                                                                       }) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const chartRef = useRef<IChartApi | null>(null);
@@ -105,19 +115,35 @@ export const LiveWebSocketChart: React.FC<LiveWebSocketChartProps> = ({
         };
     }, []);
 
-    // 2) WebSocket lifecycle: re-connect when symbol or source change
+    // 2) WebSocket lifecycle: re-connect when symbol, source, or auth change
     useEffect(() => {
         const series = seriesRef.current;
         if (!series) return;
 
-        const url = source.buildUrl(symbol);
+        let url: string;
+        try {
+            url = source.buildUrl(symbol, auth);
+        } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error('Failed to build WebSocket URL', err);
+            return;
+        }
+
+        if (!url) {
+            // eslint-disable-next-line no-console
+            console.warn(
+                `No WebSocket URL for source "${source.id}" (maybe missing auth?)`,
+            );
+            return;
+        }
+
         const ws = new WebSocket(url);
         wsRef.current = ws;
 
         ws.onopen = () => {
             try {
                 if (source.onOpen) {
-                    source.onOpen(ws, symbol);
+                    source.onOpen(ws, symbol, auth);
                 }
 
                 if (source.heartbeatIntervalMs && source.buildHeartbeatMessage) {
@@ -172,10 +198,10 @@ export const LiveWebSocketChart: React.FC<LiveWebSocketChartProps> = ({
                 window.clearInterval(heartbeatTimerRef.current);
                 heartbeatTimerRef.current = null;
             }
-            ws.close(1000, 'symbol/source changed / cleanup');
+            ws.close(1000, 'symbol/source/auth changed / cleanup');
             wsRef.current = null;
         };
-    }, [symbol, source]);
+    }, [symbol, source, auth]);
 
     return (
         <div
@@ -229,9 +255,6 @@ export const BINANCE_SOURCE: WebSocketSourceConfig = {
 
 /* ----------------------------- AllTick ----------------------------- */
 
-const ALLTICK_TOKEN =
-    (import.meta as any).env?.VITE_ALLTICK_TOKEN as string | undefined;
-
 interface AllTickPushMessage {
     cmd_id: number;
     data?: {
@@ -248,14 +271,23 @@ export const ALLTICK_SOURCE: WebSocketSourceConfig = {
     id: 'alltick',
     label: 'AllTick',
     description: 'AllTick real-time tick stream for crypto / forex / metals',
-    buildUrl: () => {
-        const token = ALLTICK_TOKEN || 'YOUR_ALLTICK_TOKEN';
-        // For crypto/forex/commodities:
-        // Docs: wss://quote.alltick.co/quote-b-ws-api?token=your_token :contentReference[oaicite:0]{index=0}
-        return `wss://quote.alltick.co/quote-b-ws-api?token=${token}`;
+    buildUrl: (_symbol: string, auth?: WebSocketSourceAuth) => {
+        const token = auth?.token;
+        if (!token) {
+            // eslint-disable-next-line no-console
+            console.warn(
+                'AllTick source selected but no token provided in auth. Check sourceAuth from backend.',
+            );
+            return '';
+        }
+
+        // For crypto/forex/commodities WS:
+        // wss://quote.alltick.co/quote-b-ws-api?token=your_token
+        return `wss://quote.alltick.co/quote-b-ws-api?token=${encodeURIComponent(
+            String(token),
+        )}`;
     },
     onOpen: (socket, symbol) => {
-        // Subscribe to latest trade price (cmd_id 22004) for a single symbol
         const payload = {
             cmd_id: 22004,
             seq_id: 1,
@@ -280,7 +312,6 @@ export const ALLTICK_SOURCE: WebSocketSourceConfig = {
 
             const parsed: AllTickPushMessage = JSON.parse(event.data);
 
-            // Tick push messages: cmd_id 22998 with latest price data :contentReference[oaicite:1]{index=1}
             if (parsed.cmd_id !== 22998 || !parsed.data) return null;
 
             const price = parseFloat(parsed.data.price);
@@ -289,7 +320,6 @@ export const ALLTICK_SOURCE: WebSocketSourceConfig = {
             const raw = Number(parsed.data.tick_time);
             if (!Number.isFinite(raw)) return null;
 
-            // Docs say "milliseconds", example looks like seconds, so handle both
             const seconds = raw > 1e12 ? Math.floor(raw / 1000) : raw;
 
             return {
@@ -304,37 +334,34 @@ export const ALLTICK_SOURCE: WebSocketSourceConfig = {
 
 /* ------------------------- FreeCryptoAPI --------------------------- */
 /*
-   FreeCryptoAPI advertises WebSockets, but the detailed WS docs
-   are behind authentication, so you MUST plug in the real URL and
-   payload schema from your account docs.
-
-   This config is structured correctly; only the URL / subscribe / parser
-   need to be adjusted once you know their real format. :contentReference[oaicite:2]{index=2}
+   WebSocket endpoint & payload shape depend on your FreeCryptoAPI plan.
+   This config uses auth.apiKey and assumes token in query, you can adapt
+   URL and parser to the real docs they give you.
 */
-
-const FREECRYPTO_API_KEY =
-    (import.meta as any).env?.VITE_FREECRYPTOAPI_KEY as string | undefined;
 
 export const FREECRYPTOAPI_SOURCE: WebSocketSourceConfig = {
     id: 'freecryptoapi',
     label: 'FreeCryptoAPI',
-    description:
-        'Streaming via FreeCryptoAPI (fill URL + parser from your account docs)',
-    buildUrl: (symbol: string) => {
-        const apiKey = FREECRYPTO_API_KEY || 'YOUR_FREECRYPTOAPI_KEY';
-        // TODO: replace with the actual WebSocket endpoint FreeCryptoAPI gives you.
-        // This is ONLY a placeholder.
-        return `wss://YOUR-FREECRYPTOAPI-WS-ENDPOINT?symbol=${symbol}&api_key=${apiKey}`;
+    description: 'Streaming via FreeCryptoAPI (configure WS endpoint & parser)',
+    buildUrl: (symbol: string, auth?: WebSocketSourceAuth) => {
+        const apiKey = auth?.apiKey;
+        if (!apiKey) {
+            // eslint-disable-next-line no-console
+            console.warn(
+                'FreeCryptoAPI source selected but no apiKey provided in auth. Check sourceAuth from backend.',
+            );
+            return '';
+        }
+
+        // TODO: Replace with the real WebSocket endpoint you get from FreeCryptoAPI docs.
+        return `wss://YOUR-FREECRYPTOAPI-WS-ENDPOINT?symbol=${encodeURIComponent(
+            symbol,
+        )}&api_key=${encodeURIComponent(String(apiKey))}`;
     },
-    onOpen: (socket, symbol) => {
-        // TODO: send the real subscribe message according to FreeCryptoAPI WS docs.
+    onOpen: (socket, symbol, auth) => {
+        // TODO: Replace with real subscribe message if required.
         // Example (pseudo):
-        //
-        // const msg = {
-        //   action: 'subscribe',
-        //   symbol,
-        //   apiKey: FREECRYPTO_API_KEY,
-        // };
+        // const msg = { action: 'subscribe', symbol, apiKey: auth?.apiKey };
         // socket.send(JSON.stringify(msg));
     },
     parseMessage: (event) => {
@@ -342,8 +369,6 @@ export const FREECRYPTOAPI_SOURCE: WebSocketSourceConfig = {
             if (typeof event.data !== 'string') return null;
             const data: any = JSON.parse(event.data);
 
-            // TODO: adapt this to the actual payload shape FreeCryptoAPI streams.
-            // Here we assume something like: { price: number, timestamp: number | string }
             if (!data || typeof data.price !== 'number') return null;
 
             const raw =
