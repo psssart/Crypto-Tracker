@@ -27,6 +27,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/integrations', [IntegrationController::class, 'store'])->name('integrations.store');
     Route::patch('/integrations/{integration}', [IntegrationController::class, 'update'])->name('integrations.update');
     Route::delete('/integrations/{integration}', [IntegrationController::class, 'destroy'])->name('integrations.destroy');
+    Route::post('/integrations/check', [IntegrationController::class, 'check'])->name('integrations.check');
 
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');

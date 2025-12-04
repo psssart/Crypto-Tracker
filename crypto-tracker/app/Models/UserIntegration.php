@@ -19,11 +19,10 @@ class UserIntegration extends Model
     ];
 
     protected $casts = [
-        'settings' => 'array',
+        'settings' => 'encrypted:array',
         'last_used_at' => 'datetime',
         'revoked_at' => 'datetime',
 
-        // this encrypts/decrypts automatically using Laravel’s app key
         'api_key' => 'encrypted',
     ];
 
