@@ -24,23 +24,24 @@ export type WebSocketSourceAuth = {
 };
 
 export type WebSocketSourceConfig = {
-    /** Stable id, used in UI / state */
     id: 'binance' | 'alltick' | 'freecryptoapi' | (string & {});
     label: string;
     description?: string;
 
-    /** Build the WebSocket URL for a symbol */
-    buildUrl: (symbol: string, auth?: WebSocketSourceAuth) => string;
-
-    /** Optional: send subscribe/auth messages when socket opens */
+    // WebSocket mode (optional)
+    buildUrl?: (symbol: string, auth?: WebSocketSourceAuth) => string;
     onOpen?: (socket: WebSocket, symbol: string, auth?: WebSocketSourceAuth) => void;
-
-    /** Map raw WebSocket message → chart tick (or null to ignore) */
-    parseMessage: (event: MessageEvent<any>) => LiveWebSocketTick | null;
-
-    /** Optional: send heartbeat periodically to keep connection alive */
+    parseMessage?: (event: MessageEvent<any>) => LiveWebSocketTick | null;
     heartbeatIntervalMs?: number;
     buildHeartbeatMessage?: () => unknown;
+
+    // REST polling mode (optional)
+    pollIntervalMs?: number;
+    buildRestRequest?: (symbol: string, auth?: WebSocketSourceAuth) => {
+        url: string;
+        init?: RequestInit;
+    };
+    parseRestResponse?: (data: any) => LiveWebSocketTick | null;
 };
 
 type LiveWebSocketChartProps = {
@@ -116,34 +117,91 @@ export const LiveWebSocketChart: React.FC<LiveWebSocketChartProps> = ({
     }, []);
 
     // 2) WebSocket lifecycle: re-connect when symbol, source, or auth change
+// 2) Data lifecycle: WebSocket OR REST polling depending on source config
     useEffect(() => {
         const series = seriesRef.current;
         if (!series) return;
 
+        // reset series when source/symbol/auth changes
+        series.setData([]);
+
+        // Cleanup holders
+        let ws: WebSocket | null = null;
+        let pollTimer: number | null = null;
+
+        const usePolling =
+            !!source.pollIntervalMs &&
+            !!source.buildRestRequest &&
+            !!source.parseRestResponse;
+
+        if (usePolling) {
+            // ---------- REST POLLING MODE (e.g. FreeCryptoAPI) ----------
+            const { url, init } = source.buildRestRequest!(symbol, auth);
+
+            const fetchOnce = async () => {
+                try {
+                    const res = await fetch(url, init);
+                    if (!res.ok) return;
+
+                    const json = await res.json();
+                    const tick = source.parseRestResponse!(json);
+                    if (!tick) return;
+
+                    const point: LineData<Time> = {
+                        time: tick.time,
+                        value: tick.value,
+                    };
+                    series.update(point);
+                } catch (err) {
+                    console.error('FreeCryptoAPI polling error', err);
+                }
+            };
+
+            // immediate first fetch
+            fetchOnce();
+
+            pollTimer = window.setInterval(
+                fetchOnce,
+                source.pollIntervalMs ?? 2000,
+            );
+
+            return () => {
+                if (pollTimer != null) {
+                    window.clearInterval(pollTimer);
+                }
+            };
+        }
+
+        // ---------- WEBSOCKET MODE (binance / alltick / future stuff) ----------
         let url: string;
         try {
+            if (!source.buildUrl || !source.parseMessage) {
+                console.warn(
+                    `Source "${source.id}" has no WebSocket config. Skipping.`,
+                );
+                return;
+            }
+
             url = source.buildUrl(symbol, auth);
         } catch (err) {
-            // eslint-disable-next-line no-console
             console.error('Failed to build WebSocket URL', err);
             return;
         }
 
         if (!url) {
-            // eslint-disable-next-line no-console
             console.warn(
                 `No WebSocket URL for source "${source.id}" (maybe missing auth?)`,
             );
             return;
         }
 
-        const ws = new WebSocket(url);
+        ws = new WebSocket(url);
         wsRef.current = ws;
 
         ws.onopen = () => {
             try {
                 if (source.onOpen) {
-                    source.onOpen(ws, symbol, auth);
+                    source.onOpen(ws!, symbol, auth);
                 }
 
                 if (source.heartbeatIntervalMs && source.buildHeartbeatMessage) {
@@ -154,26 +212,24 @@ export const LiveWebSocketChart: React.FC<LiveWebSocketChartProps> = ({
                     heartbeatTimerRef.current = window.setInterval(() => {
                         try {
                             const payload = source.buildHeartbeatMessage!();
-                            ws.send(
+                            ws!.send(
                                 typeof payload === 'string'
                                     ? payload
                                     : JSON.stringify(payload),
                             );
                         } catch (err) {
-                            // eslint-disable-next-line no-console
                             console.error('Failed to send heartbeat', err);
                         }
                     }, source.heartbeatIntervalMs);
                 }
             } catch (err) {
-                // eslint-disable-next-line no-console
                 console.error('Error in WebSocket onopen handler', err);
             }
         };
 
         ws.onmessage = (event: MessageEvent<any>) => {
             try {
-                const tick = source.parseMessage(event);
+                const tick = source.parseMessage!(event);
                 if (!tick) return;
 
                 const point: LineData<Time> = {
@@ -183,13 +239,11 @@ export const LiveWebSocketChart: React.FC<LiveWebSocketChartProps> = ({
 
                 series.update(point);
             } catch (err) {
-                // eslint-disable-next-line no-console
                 console.error('Failed to parse WebSocket message', err);
             }
         };
 
         ws.onerror = (event) => {
-            // eslint-disable-next-line no-console
             console.error('WebSocket error', event);
         };
 
@@ -198,10 +252,12 @@ export const LiveWebSocketChart: React.FC<LiveWebSocketChartProps> = ({
                 window.clearInterval(heartbeatTimerRef.current);
                 heartbeatTimerRef.current = null;
             }
-            ws.close(1000, 'symbol/source/auth changed / cleanup');
+            if (ws) {
+                ws.close(1000, 'symbol/source/auth changed / cleanup');
+            }
             wsRef.current = null;
         };
-    }, [symbol, source, auth]);
+    }, [symbol, source, auth]);;
 
     return (
         <div
@@ -342,48 +398,63 @@ export const ALLTICK_SOURCE: WebSocketSourceConfig = {
 export const FREECRYPTOAPI_SOURCE: WebSocketSourceConfig = {
     id: 'freecryptoapi',
     label: 'FreeCryptoAPI',
-    description: 'Streaming via FreeCryptoAPI (configure WS endpoint & parser)',
-    buildUrl: (symbol: string, auth?: WebSocketSourceAuth) => {
+    description: 'Live price via REST polling from FreeCryptoAPI',
+
+    // use polling instead of WebSocket
+    pollIntervalMs: 2_000, // 2s, tweak as you like
+
+    buildRestRequest: (symbol: string, auth?: WebSocketSourceAuth) => {
         const apiKey = auth?.apiKey;
         if (!apiKey) {
-            // eslint-disable-next-line no-console
             console.warn(
                 'FreeCryptoAPI source selected but no apiKey provided in auth. Check sourceAuth from backend.',
             );
-            return '';
         }
 
-        // TODO: Replace with the real WebSocket endpoint you get from FreeCryptoAPI docs.
-        return `wss://YOUR-FREECRYPTOAPI-WS-ENDPOINT?symbol=${encodeURIComponent(
-            symbol,
-        )}&api_key=${encodeURIComponent(String(apiKey))}`;
-    },
-    onOpen: (socket, symbol, auth) => {
-        // TODO: Replace with real subscribe message if required.
-        // Example (pseudo):
-        // const msg = { action: 'subscribe', symbol, apiKey: auth?.apiKey };
-        // socket.send(JSON.stringify(msg));
-    },
-    parseMessage: (event) => {
-        try {
-            if (typeof event.data !== 'string') return null;
-            const data: any = JSON.parse(event.data);
+        // FreeCryptoAPI docs show symbol like "BTC" etc.
+        // You are using "BTCUSDT" etc. Adjust mapping as needed.
+        const shortSymbol = symbol.replace('USDT', '');
 
-            if (!data || typeof data.price !== 'number') return null;
+        const url = `https://api.freecryptoapi.com/v1/getData?symbol=${encodeURIComponent(
+            shortSymbol,
+        )}`;
 
-            const raw =
-                data.timestamp != null
-                    ? Number(data.timestamp)
-                    : Number(data.t ?? Date.now());
-            const seconds = raw > 1e12 ? Math.floor(raw / 1000) : raw;
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+        };
 
-            return {
-                time: seconds as UTCTimestamp,
-                value: data.price,
-            };
-        } catch {
-            return null;
+        if (apiKey) {
+            headers.Authorization = `Bearer ${apiKey}`;
         }
+
+        return {
+            url,
+            init: {
+                method: 'GET',
+                headers,
+            },
+        };
+    },
+
+    parseRestResponse: (data: any): LiveWebSocketTick | null => {
+        if (!data) return null;
+
+        // docs example:
+        // {
+        //   "symbol": "BTC",
+        //   "price": 94250.45,
+        //   "change_24h": ...,
+        //   ...
+        // }
+        const price = Number(data.price);
+        if (!Number.isFinite(price)) return null;
+
+        const ts = Math.floor(Date.now() / 1000) as UTCTimestamp;
+
+        return {
+            time: ts,
+            value: price,
+        };
     },
 };
 
