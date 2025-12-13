@@ -17,6 +17,7 @@ class IntegrationHealthService
                 'alltick'       => $this->checkAllTick($apiKey),
                 'freecryptoapi' => $this->checkFreeCryptoApi($apiKey),
                 'bybit'         => $this->checkBybit($apiKey, $apiSecret),
+                'openai' => $this->checkOpenAI($apiKey),
                 default         => [
                     'ok' => false,
                     'message' => 'Health check not implemented for this provider.',
@@ -146,6 +147,33 @@ class IntegrationHealthService
         return [
             'ok' => true,
             'message' => 'Bybit API key & secret are valid.',
+        ];
+    }
+
+    private function checkOpenAI(string $apiKey): array
+    {
+        $res = Http::timeout(10)
+            ->withToken($apiKey)
+            ->acceptJson()
+            ->get('https://api.openai.com/v1/models');
+
+        if ($res->successful()) {
+            return ['ok' => true, 'message' => 'OpenAI API key looks valid.'];
+        }
+
+        $status = $res->status();
+        $msg = 'OpenAI health check failed.';
+
+        if ($status === 401) {
+            $msg = 'OpenAI rejected the API key (401). Check the key / project access.';
+        }
+
+        return [
+            'ok' => false,
+            'message' => $msg,
+            'details' => [
+                'status' => $status,
+            ],
         ];
     }
 }

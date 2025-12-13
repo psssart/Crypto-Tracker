@@ -3,6 +3,7 @@
 use App\Http\Controllers\ChartController;
 use App\Http\Controllers\DexScreenerController;
 use App\Http\Controllers\IntegrationController;
+use App\Http\Controllers\OpenAIController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -42,6 +43,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/chart', [ChartController::class, 'show'])->name('chart');
     Route::post('/chart/check-source', [ChartController::class, 'checkSource'])->name('chart.checkSource');
+
+    Route::post('/openai/respond', [OpenAIController::class, 'respond']);
 });
 
 require __DIR__.'/auth.php';

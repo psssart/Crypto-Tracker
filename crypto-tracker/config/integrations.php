@@ -61,6 +61,23 @@ return [
             'ws_source_id' => 'bybit',
         ],
 
+        'openai' => [
+            'name' => 'OpenAI',
+            'description' => 'LLM responses (text, tools, structured output).',
+            'docs_url' => 'https://platform.openai.com/docs/api-reference/responses',
+            'secret_field' => [
+                'key' => 'api_key',
+                'label' => 'API key',
+                'help' => 'Create an API key in OpenAI dashboard. Keep it server-side only.',
+            ],
+            'default_settings' => [
+                'model' => 'gpt-4o-mini',
+            ],
+            'health_check' => [
+                'enabled' => true,
+            ],
+        ],
+
     ],
 
 ];
