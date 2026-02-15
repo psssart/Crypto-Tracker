@@ -14,11 +14,27 @@ A Laravel 12 + Breeze application, containerized with Docker (PHP-FPM, Nginx, Po
 
 ---
 
-## ⚙️ Setup
+## ⚙️ Setup on WSL
 
-1. **Copy & configure your environment file**
+1. Install Composer on WSL
    ```bash
-   cp .env.example .env
+   sudo apt update
+   sudo apt install php-cli php-curl php-xml php-mbstring zip unzip
+   curl -sS https://getcomposer.org/installer | php
+   sudo mv composer.phar /usr/local/bin/composer
+   ```
+
+2. Run composer install inside laravel project root
+   ```bash
+   cd crypto-tracker/
+   composer install
+   ```
+
+3. **Copy & configure your environment file**
+   ```bash
+   cd ../
+   cp .env.dev .env
+   cp .env crypto-tracker/.env
    ```
    Then open .env and enter your generated **APP_KEY**: 
    ```bash
@@ -27,16 +43,15 @@ A Laravel 12 + Breeze application, containerized with Docker (PHP-FPM, Nginx, Po
    And fill in any missing values (DB credentials, mail, etc.)
 
 
-2. **Generate a self-signed SSL certificate**
+4. **Generate a self-signed SSL certificate**
     ```bash
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout certs\localhost.key -out certs\localhost.crt -subj "/CN=localhost"
     ```
-3. **Run Docker Desktop**
-4. **Build & Start all services**
+6. **Build & Start all services**
     ```bash
-   docker-compose up -d --build
+   docker compose up -d --build
    ```
-5. **Run Vite in Laravel app root**
+7. **Run Vite in Laravel app root**
     ```bash
     cd ./crypto-tracker
    ```

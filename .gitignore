@@ -4,8 +4,8 @@
 .vscode
 
 # SSL certificates
-localhost.crt
-localhost.key
+*.crt
+*.key
 
 # Main enviroment file
 .env

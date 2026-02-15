@@ -1,36 +1,49 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import react from '@vitejs/plugin-react';
 import fs from 'fs';
+import path from 'path';
 
-const isDevServer = process.env.APP_ENV !== 'production';
-const isDocker = process.env.VITE_HTTPS === 'true';
+export default defineConfig(({ mode }) => {
+    const env = loadEnv(mode, process.cwd(), '');
 
-// Dev server settings depending on the environment
-const serverConfig = isDevServer && isDocker
-    ? {
-        https: {
-            key: fs.readFileSync('/etc/vite/certs/localhost.key'),
-            cert: fs.readFileSync('/etc/vite/certs/localhost.crt'),
-        },
-        host: true,
-        port: 5173,
-        hmr: { host: 'localhost', protocol: 'wss' },
-        watch: { usePolling: true, interval: 100 },
-    }
-    : {
-        host: 'localhost',
-        port: 5173,
-        open: true,
+    const isDevServer = mode === 'development';
+    const useHttps = env.VITE_HTTPS === 'true';
+
+    // Logic to find certs whether in Docker or WSL
+    const getCertPath = (file) => {
+        const internalPath = `/etc/nginx/certs/${file}`; // Path inside Docker
+        const externalPath = path.resolve(__dirname, '../certs/', file); // Path in WSL
+
+        if (fs.existsSync(internalPath)) return internalPath;
+        if (fs.existsSync(externalPath)) return externalPath;
+        return null;
     };
 
-export default defineConfig({
-    server: serverConfig,
-    plugins: [
-        laravel({
-            input: 'resources/js/app.tsx',
-            refresh: true,
-        }),
-        react(),
-    ],
+    const serverConfig = isDevServer && useHttps
+        ? {
+            https: {
+                key: fs.readFileSync(getCertPath('localhost.key')),
+                cert: fs.readFileSync(getCertPath('localhost.crt')),
+            },
+            host: '0.0.0.0', // Essential for Docker/WSL networking
+            port: 5173,
+            hmr: { host: 'localhost', protocol: 'wss' },
+            watch: { usePolling: true, interval: 100 },
+        }
+        : {
+            host: 'localhost',
+            port: 5173,
+        };
+
+    return {
+        server: serverConfig,
+        plugins: [
+            laravel({
+                input: 'resources/js/app.tsx',
+                refresh: true,
+            }),
+            react(),
+        ],
+    };
 });
