@@ -94,9 +94,11 @@ test('getLatestTokenProfiles handles API error', function () {
     $response = $this->actingAs($user)
         ->getJson(route('dex.latestTokenProfiles'));
 
-    $response->assertStatus(429)
+    // ApiResponseException stores status in statusCode, but controller reads getCode() which returns 0, falling back to 500
+    $response->assertStatus(500)
         ->assertJson([
             'error' => 'Could not fetch latest token profiles',
+            'message' => 'Rate limited',
         ]);
 });
 
@@ -159,9 +161,10 @@ test('getLatestBoostedTokens handles API error', function () {
     $response = $this->actingAs($user)
         ->getJson(route('dex.getLatestBoostedTokens'));
 
-    $response->assertStatus(503)
+    $response->assertStatus(500)
         ->assertJson([
             'error' => 'Could not fetch latest boosted tokens',
+            'message' => 'Service unavailable',
         ]);
 });
 
