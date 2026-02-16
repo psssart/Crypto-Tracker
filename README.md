@@ -67,11 +67,7 @@ A Laravel 12 + Breeze application, containerized with Docker (PHP-FPM, Nginx, Po
 7. **Run Vite in Laravel app root**
     ```bash
     cd ./crypto-tracker
-   ```
-   ```bash
    npm install
-   ```
-    ```bash
    npm run dev
    ```
 ---
@@ -114,6 +110,10 @@ docker-compose exec app php artisan tinker
 >>> cache()->put('test_key', 'hello', 60);
 >>> cache()->get('test_key'); // Should return "hello"
 ```
+Live Traffic Sniffing:
+```bash
+docker exec -it crypto-tracker-redis redis-cli monitor
+```
 
 ---
 
@@ -124,7 +124,7 @@ docker-compose exec app php artisan tinker
 - Assets are injected automatically by the Laravel Breeze plugin
 
 Open your browser at:
-- *App:* https://localhost
+- *App:* https://localhost:8443
 - *Vite:* http://localhost:5173
 
 ---
