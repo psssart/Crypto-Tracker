@@ -173,6 +173,12 @@ export default function Authenticated({
                         >
                             Dashboard
                         </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                          href={route('chart')}
+                          active={route().current('chart')}
+                        >
+                          Chart
+                        </ResponsiveNavLink>
                     </div>
 
                     <div className="border-t border-gray-200 pb-1 pt-4 dark:border-gray-600">
@@ -188,6 +194,9 @@ export default function Authenticated({
                         <div className="mt-3 space-y-1">
                             <ResponsiveNavLink href={route('profile.edit')}>
                                 Profile
+                            </ResponsiveNavLink>
+                            <ResponsiveNavLink href={route('integrations.index')}>
+                              Integrations
                             </ResponsiveNavLink>
                             <ResponsiveNavLink
                                 method="post"

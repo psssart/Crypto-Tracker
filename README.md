@@ -44,12 +44,25 @@ A Laravel 12 + Breeze application, containerized with Docker (PHP-FPM, Nginx, Po
 
 
 4. **Generate a self-signed SSL certificate**
-    ```bash
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout certs\localhost.key -out certs\localhost.crt -subj "/CN=localhost"
-    ```
-6. **Build & Start all services**
+    - Windows:
+        ```bash
+        openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout certs\localhost.key -out certs\localhost.crt -subj "/CN=localhost"
+        ```
+    - Linux:
+        ```bash
+        mkdir -p certs
+        openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+        -keyout certs/localhost.key \
+        -out certs/localhost.crt \
+        -subj "/CN=localhost"
+        ```
+5. **Build & Start all services**
     ```bash
    docker compose up -d --build
+   ```
+6. Give permissions
+   ```bash
+   sudo chmod -R 777 crypto-tracker/storage crypto-tracker/bootstrap/cache
    ```
 7. **Run Vite in Laravel app root**
     ```bash
