@@ -252,6 +252,7 @@ export default function Chart({
                                     height={420}
                                     source={activeSource}
                                     auth={activeAuth}
+                                    integrationsUrl={integrationsUrl}
                                 />
                             </div>
                         </div>

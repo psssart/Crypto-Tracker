@@ -10,6 +10,7 @@ import {
     UTCTimestamp,
     LineSeries,
 } from 'lightweight-charts';
+import { flashError } from '@/Components/FlashMessages';
 
 export type LiveWebSocketTick = {
     time: UTCTimestamp;
@@ -49,6 +50,7 @@ type LiveWebSocketChartProps = {
     height?: number;
     source: WebSocketSourceConfig;
     auth?: WebSocketSourceAuth;
+    integrationsUrl?: string;
 };
 
 export const LiveWebSocketChart: React.FC<LiveWebSocketChartProps> = ({
@@ -56,6 +58,7 @@ export const LiveWebSocketChart: React.FC<LiveWebSocketChartProps> = ({
                                                                           height = 400,
                                                                           source,
                                                                           auth,
+                                                                          integrationsUrl,
                                                                       }) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const chartRef = useRef<IChartApi | null>(null);
@@ -116,8 +119,7 @@ export const LiveWebSocketChart: React.FC<LiveWebSocketChartProps> = ({
         };
     }, []);
 
-    // 2) WebSocket lifecycle: re-connect when symbol, source, or auth change
-// 2) Data lifecycle: WebSocket OR REST polling depending on source config
+    // 2) Data lifecycle: WebSocket OR REST polling depending on source config
     useEffect(() => {
         const series = seriesRef.current;
         if (!series) return;
@@ -154,6 +156,7 @@ export const LiveWebSocketChart: React.FC<LiveWebSocketChartProps> = ({
                     series.update(point);
                 } catch (err) {
                     console.error('FreeCryptoAPI polling error', err);
+                    flashError('Polling request failed');
                 }
             };
 
@@ -185,12 +188,23 @@ export const LiveWebSocketChart: React.FC<LiveWebSocketChartProps> = ({
             url = source.buildUrl(symbol, auth);
         } catch (err) {
             console.error('Failed to build WebSocket URL', err);
+            flashError('Failed to build WebSocket URL');
             return;
         }
 
         if (!url) {
             console.warn(
                 `No WebSocket URL for source "${source.id}" (maybe missing auth?)`,
+            );
+            flashError(
+                <>
+                    No integration configured for {source.label}.{' '}
+                    {integrationsUrl && (
+                        <a href={integrationsUrl} className="underline">
+                            Configure it here
+                        </a>
+                    )}
+                </>,
             );
             return;
         }
@@ -243,8 +257,17 @@ export const LiveWebSocketChart: React.FC<LiveWebSocketChartProps> = ({
             }
         };
 
-        ws.onerror = (event) => {
-            console.error('WebSocket error', event);
+        ws.onerror = () => {
+            flashError(
+                <>
+                    WebSocket connection failed.{' '}
+                    {integrationsUrl && (
+                        <a href={integrationsUrl} className="underline">
+                            Check integration
+                        </a>
+                    )}
+                </>,
+            );
         };
 
         return () => {
@@ -257,7 +280,7 @@ export const LiveWebSocketChart: React.FC<LiveWebSocketChartProps> = ({
             }
             wsRef.current = null;
         };
-    }, [symbol, source, auth]);;
+    }, [symbol, source, auth, integrationsUrl]);
 
     return (
         <div
