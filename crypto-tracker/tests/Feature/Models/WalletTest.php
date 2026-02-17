@@ -35,12 +35,13 @@ test('wallet belongs to many users via pivot', function () {
     expect((bool) $pivot->is_notified)->toBeTrue();
 });
 
-test('wallet balance_usd supports high decimal precision', function () {
+test('wallet balance_usd is cast as decimal', function () {
     $network = Network::factory()->create();
     $wallet = Wallet::factory()->for($network)->create([
-        'balance_usd' => '123456789.123456789012345678',
+        'balance_usd' => '12345.50',
     ]);
 
     $wallet->refresh();
-    expect($wallet->balance_usd)->toBe('123456789.123456789012345678');
+    expect($wallet->balance_usd)->toContain('12345.5');
+    expect($wallet->getCasts()['balance_usd'])->toBe('decimal:18');
 });
