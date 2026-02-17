@@ -13,7 +13,7 @@ export default function Authenticated({
     children,
 }: PropsWithChildren<{ header?: ReactNode }>) {
     const { appearance, updateAppearance } = useTheme();
-    const user = usePage().props.auth.user;
+    const user = usePage().props.auth?.user ?? null;
 
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
         useState(false);
@@ -56,7 +56,7 @@ export default function Authenticated({
                                     href={route('dashboard')}
                                     active={route().current('dashboard')}
                                 >
-                                    Dashboard
+                                    Meme coins
                                 </NavLink>
                                 <NavLink
                                     href={route('chart')}
@@ -65,62 +65,87 @@ export default function Authenticated({
                                     Chart
                                 </NavLink>
                                 <NavLink
-                                    href={route('watchlist.index')}
-                                    active={route().current('watchlist.index')}
+                                    href={route('whales')}
+                                    active={route().current('whales')}
                                 >
-                                    Watchlist
+                                    Whales
                                 </NavLink>
+                                {user && (
+                                    <NavLink
+                                        href={route('watchlist.index')}
+                                        active={route().current('watchlist.index')}
+                                    >
+                                        Watchlist
+                                    </NavLink>
+                                )}
                             </div>
                         </div>
 
                         <div className="hidden sm:ms-6 sm:flex sm:items-center">
-                            <div className="relative ms-3">
-                                <Dropdown>
-                                    <Dropdown.Trigger>
-                                        <span className="inline-flex rounded-md">
-                                            <button
-                                                type="button"
-                                                className="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none dark:bg-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
-                                            >
-                                                {user.name}
-
-                                                <svg
-                                                    className="-me-0.5 ms-2 h-4 w-4"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 20 20"
-                                                    fill="currentColor"
+                            {user ? (
+                                <div className="relative ms-3">
+                                    <Dropdown>
+                                        <Dropdown.Trigger>
+                                            <span className="inline-flex rounded-md">
+                                                <button
+                                                    type="button"
+                                                    className="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none dark:bg-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
                                                 >
-                                                    <path
-                                                        fillRule="evenodd"
-                                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                        clipRule="evenodd"
-                                                    />
-                                                </svg>
-                                            </button>
-                                        </span>
-                                    </Dropdown.Trigger>
+                                                    {user.name}
 
-                                    <Dropdown.Content>
-                                        <Dropdown.Link
-                                            href={route('profile.edit')}
-                                        >
-                                            Profile
-                                        </Dropdown.Link>
-                                        <Dropdown.Link
-                                            href={route('integrations.index')}
-                                        >
-                                            Integrations
-                                        </Dropdown.Link>
-                                        <Dropdown.Link
-                                            href={route('logout')}
-                                            method="post"
-                                            as="button"
-                                        >
-                                            Log Out
-                                        </Dropdown.Link>
-                                    </Dropdown.Content>
-                                </Dropdown>
-                            </div>
+                                                    <svg
+                                                        className="-me-0.5 ms-2 h-4 w-4"
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        viewBox="0 0 20 20"
+                                                        fill="currentColor"
+                                                    >
+                                                        <path
+                                                            fillRule="evenodd"
+                                                            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                                            clipRule="evenodd"
+                                                        />
+                                                    </svg>
+                                                </button>
+                                            </span>
+                                        </Dropdown.Trigger>
+
+                                        <Dropdown.Content>
+                                            <Dropdown.Link
+                                                href={route('profile.edit')}
+                                            >
+                                                Profile
+                                            </Dropdown.Link>
+                                            <Dropdown.Link
+                                                href={route('integrations.index')}
+                                            >
+                                                Integrations
+                                            </Dropdown.Link>
+                                            <Dropdown.Link
+                                                href={route('logout')}
+                                                method="post"
+                                                as="button"
+                                            >
+                                                Log Out
+                                            </Dropdown.Link>
+                                        </Dropdown.Content>
+                                    </Dropdown>
+                                </div>
+                            ) : (
+                                <div className="flex items-center space-x-4">
+                                    <Link
+                                        href={route('login')}
+                                        className="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                                    >
+                                        Log in
+                                    </Link>
+                                    <Link
+                                        href={route('register')}
+                                        className="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                                    >
+                                        Register
+                                    </Link>
+                                </div>
+                            )}
                         </div>
 
                         <div className="-me-2 flex items-center sm:hidden">
@@ -177,7 +202,7 @@ export default function Authenticated({
                             href={route('dashboard')}
                             active={route().current('dashboard')}
                         >
-                            Dashboard
+                          Meme coins
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                           href={route('chart')}
@@ -186,38 +211,59 @@ export default function Authenticated({
                           Chart
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
-                          href={route('watchlist.index')}
-                          active={route().current('watchlist.index')}
+                          href={route('whales')}
+                          active={route().current('whales')}
                         >
-                          Watchlist
+                          Whales
                         </ResponsiveNavLink>
+                        {user && (
+                            <ResponsiveNavLink
+                              href={route('watchlist.index')}
+                              active={route().current('watchlist.index')}
+                            >
+                              Watchlist
+                            </ResponsiveNavLink>
+                        )}
                     </div>
 
                     <div className="border-t border-gray-200 pb-1 pt-4 dark:border-gray-600">
-                        <div className="px-4">
-                            <div className="text-base font-medium text-gray-800 dark:text-gray-200">
-                                {user.name}
-                            </div>
-                            <div className="text-sm font-medium text-gray-500">
-                                {user.email}
-                            </div>
-                        </div>
+                        {user ? (
+                            <>
+                                <div className="px-4">
+                                    <div className="text-base font-medium text-gray-800 dark:text-gray-200">
+                                        {user.name}
+                                    </div>
+                                    <div className="text-sm font-medium text-gray-500">
+                                        {user.email}
+                                    </div>
+                                </div>
 
-                        <div className="mt-3 space-y-1">
-                            <ResponsiveNavLink href={route('profile.edit')}>
-                                Profile
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink href={route('integrations.index')}>
-                              Integrations
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink
-                                method="post"
-                                href={route('logout')}
-                                as="button"
-                            >
-                                Log Out
-                            </ResponsiveNavLink>
-                        </div>
+                                <div className="mt-3 space-y-1">
+                                    <ResponsiveNavLink href={route('profile.edit')}>
+                                        Profile
+                                    </ResponsiveNavLink>
+                                    <ResponsiveNavLink href={route('integrations.index')}>
+                                      Integrations
+                                    </ResponsiveNavLink>
+                                    <ResponsiveNavLink
+                                        method="post"
+                                        href={route('logout')}
+                                        as="button"
+                                    >
+                                        Log Out
+                                    </ResponsiveNavLink>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="mt-3 space-y-1">
+                                <ResponsiveNavLink href={route('login')}>
+                                    Log in
+                                </ResponsiveNavLink>
+                                <ResponsiveNavLink href={route('register')}>
+                                    Register
+                                </ResponsiveNavLink>
+                            </div>
+                        )}
                     </div>
                 </div>
             </nav>

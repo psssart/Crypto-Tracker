@@ -31,6 +31,8 @@ export interface WhaleWallet {
     id: number;
     address: string;
     balance_usd: string;
+    last_synced_at: string | null;
+    metadata: { label?: string } | null;
     network: Network;
 }
 
@@ -38,6 +40,6 @@ export type PageProps<
     T extends Record<string, unknown> = Record<string, unknown>,
 > = T & {
     auth: {
-        user: User;
+        user: User | null;
     };
 };

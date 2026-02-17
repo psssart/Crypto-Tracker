@@ -35,7 +35,7 @@ type SourceHealth = {
 
 type ChartProps = {
     integrationBackedSourceIds: string[]; // e.g. ['alltick', 'freecryptoapi', 'bybit']
-    integrationsUrl: string;
+    integrationsUrl: string | null;
     sourceAuth?: Record<string, WebSocketSourceAuth>; // keyed by WS source id
 };
 
@@ -211,16 +211,18 @@ export default function Chart({
             {selectedIsBacked && selectedHealth.status === 'error' && (
                 <div className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-100">
                     <p>{selectedHealth.message ?? 'This data source is not available.'}</p>
-                    <p className="mt-1">
-                        Fix the API key on the{' '}
-                        <a
-                            href={integrationsUrl}
-                            className="font-medium underline"
-                        >
-                            Integrations page
-                        </a>
-                        .
-                    </p>
+                    {integrationsUrl && (
+                        <p className="mt-1">
+                            Fix the API key on the{' '}
+                            <a
+                                href={integrationsUrl}
+                                className="font-medium underline"
+                            >
+                                Integrations page
+                            </a>
+                            .
+                        </p>
+                    )}
                 </div>
             )}
         </div>

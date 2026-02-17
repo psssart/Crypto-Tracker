@@ -61,7 +61,6 @@ export default function Dashboard() {
 
     const handleCopy = (text: string) => {
         navigator.clipboard.writeText(text);
-        // TODO: hook in a toast/alert here
     };
 
     const toggleExpand = (chainId: string) => {

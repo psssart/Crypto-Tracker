@@ -50,7 +50,7 @@ type LiveWebSocketChartProps = {
     height?: number;
     source: WebSocketSourceConfig;
     auth?: WebSocketSourceAuth;
-    integrationsUrl?: string;
+    integrationsUrl?: string | null;
 };
 
 export const LiveWebSocketChart: React.FC<LiveWebSocketChartProps> = ({

@@ -16,7 +16,7 @@ class ChartController extends Controller
     {
         $user = $request->user();
         $providers = IntegrationRegistry::all();
-        $integrations = $user->integrations()->get()->keyBy('provider');
+        $integrations = $user ? $user->integrations()->get()->keyBy('provider') : collect();
 
         $integrationBackedSourceIds = [];
 
@@ -59,7 +59,7 @@ class ChartController extends Controller
 
         return Inertia::render('Chart', [
             'integrationBackedSourceIds' => $integrationBackedSourceIds,
-            'integrationsUrl' => route('integrations.index'),
+            'integrationsUrl' => $user ? route('integrations.index') : null,
             'sourceAuth' => $sourceAuth,
         ]);
     }
