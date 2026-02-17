@@ -69,6 +69,9 @@ class WatchlistController extends Controller
             'custom_label' => 'nullable|string|max:255',
             'is_notified' => 'sometimes|boolean',
             'notify_threshold_usd' => 'nullable|numeric|min:0',
+            'notify_direction' => 'sometimes|in:all,incoming,outgoing',
+            'notify_cooldown_minutes' => 'nullable|integer|min:0|max:10080',
+            'notes' => 'nullable|string|max:5000',
         ]);
 
         $user->wallets()->updateExistingPivot($wallet->id, $validated);

@@ -39,7 +39,7 @@ class Wallet extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'user_wallet')
-            ->withPivot('custom_label', 'is_notified', 'notify_threshold_usd')
+            ->withPivot('custom_label', 'is_notified', 'notify_threshold_usd', 'notify_direction', 'notify_cooldown_minutes', 'last_notified_at', 'notes')
             ->withTimestamps();
     }
 

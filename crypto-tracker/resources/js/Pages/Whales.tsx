@@ -1,12 +1,13 @@
 import PublicLayout from '@/Layouts/PublicLayout';
 import { Network, PageProps, WhaleWallet } from '@/types';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
 interface Props extends PageProps {
     whales: WhaleWallet[];
     networks: Network[];
     activeNetwork: string | null;
+    trackedWhaleIds: number[];
 }
 
 function truncateAddress(address: string): string {
@@ -59,10 +60,16 @@ function WhaleCard({
     whale,
     copiedAddr,
     onCopy,
+    isTracked,
+    isAuthenticated,
+    onTrack,
 }: {
     whale: WhaleWallet;
     copiedAddr: string;
     onCopy: (addr: string) => void;
+    isTracked: boolean;
+    isAuthenticated: boolean;
+    onTrack: (whale: WhaleWallet) => void;
 }) {
     const explorer = explorerAddressUrl(whale.network, whale.address);
     const label = whale.metadata?.label;
@@ -146,13 +153,46 @@ function WhaleCard({
                 </div>
             </div>
 
-            <div className="mt-3 text-xl font-bold text-white">{formatUsd(whale.balance_usd)}</div>
+            <div className="mt-3 flex items-center justify-between">
+                <span className="text-xl font-bold text-white">
+                    {formatUsd(whale.balance_usd)}
+                </span>
+                {isAuthenticated &&
+                    (isTracked ? (
+                        <span className="rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-300">
+                            Tracking
+                        </span>
+                    ) : (
+                        <button
+                            onClick={() => onTrack(whale)}
+                            className="rounded-full border border-white/20 px-3 py-1 text-xs font-medium text-white/70 transition hover:border-white/40 hover:text-white"
+                        >
+                            Track
+                        </button>
+                    ))}
+            </div>
         </div>
     );
 }
 
-export default function Whales({ auth, whales, networks, activeNetwork }: Props) {
+export default function Whales({ auth, whales, networks, activeNetwork, trackedWhaleIds }: Props) {
     const [copiedAddr, setCopiedAddr] = useState('');
+    const [trackedIds, setTrackedIds] = useState<number[]>(trackedWhaleIds);
+
+    const handleTrack = (whale: WhaleWallet) => {
+        router.post(
+            route('watchlist.store'),
+            {
+                network_id: whale.network.id,
+                address: whale.address,
+                custom_label: whale.metadata?.label || '',
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => setTrackedIds((prev) => [...prev, whale.id]),
+            },
+        );
+    };
 
     const totalValue = whales.reduce((sum, w) => sum + parseFloat(w.balance_usd), 0);
 
@@ -247,6 +287,9 @@ export default function Whales({ auth, whales, networks, activeNetwork }: Props)
                                     onCopy={(addr) =>
                                         copyToClipboard(addr, setCopiedAddr)
                                     }
+                                    isTracked={trackedIds.includes(whale.id)}
+                                    isAuthenticated={!!auth.user}
+                                    onTrack={handleTrack}
                                 />
                             ))}
                         </div>

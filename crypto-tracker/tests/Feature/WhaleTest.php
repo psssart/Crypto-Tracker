@@ -110,3 +110,52 @@ test('whales page excludes non-whale wallets', function () {
             ->where('whales.0.address', '0xWhale')
         );
 });
+
+// ── trackedWhaleIds ────────────────────────────────────────────────
+
+test('whales page returns empty trackedWhaleIds for guests', function () {
+    $this->get(route('whales'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Whales')
+            ->where('trackedWhaleIds', [])
+        );
+});
+
+test('whales page returns trackedWhaleIds for authenticated users', function () {
+    $user = User::factory()->create();
+    $whale = Wallet::factory()->create([
+        'network_id' => $this->network->id,
+        'address' => '0xTrackedWhale',
+        'is_whale' => true,
+        'balance_usd' => 1_000_000,
+    ]);
+
+    $user->wallets()->attach($whale->id);
+
+    $this->actingAs($user)
+        ->get(route('whales'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Whales')
+            ->where('trackedWhaleIds', [$whale->id])
+        );
+});
+
+test('whales page does not include untracked wallet ids', function () {
+    $user = User::factory()->create();
+    Wallet::factory()->create([
+        'network_id' => $this->network->id,
+        'address' => '0xUntrackedWhale',
+        'is_whale' => true,
+        'balance_usd' => 2_000_000,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('whales'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Whales')
+            ->where('trackedWhaleIds', [])
+        );
+});

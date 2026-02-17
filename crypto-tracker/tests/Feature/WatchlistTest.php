@@ -240,3 +240,92 @@ test('destroy rejects non-owner', function () {
         ->delete(route('watchlist.destroy', $wallet))
         ->assertForbidden();
 });
+
+// ── Update: new tracking settings ──────────────────────────────────
+
+test('update accepts notify_direction field', function () {
+    $user = User::factory()->create();
+    $network = Network::factory()->ethereum()->create();
+    $wallet = Wallet::factory()->for($network)->create();
+    $user->wallets()->attach($wallet->id);
+
+    $this->actingAs($user)
+        ->patch(route('watchlist.update', $wallet), [
+            'notify_direction' => 'incoming',
+        ])
+        ->assertRedirect();
+
+    $pivot = $user->wallets()->where('wallet_id', $wallet->id)->first()->pivot;
+    expect($pivot->notify_direction)->toBe('incoming');
+});
+
+test('update rejects invalid notify_direction', function () {
+    $user = User::factory()->create();
+    $network = Network::factory()->ethereum()->create();
+    $wallet = Wallet::factory()->for($network)->create();
+    $user->wallets()->attach($wallet->id);
+
+    $this->actingAs($user)
+        ->patch(route('watchlist.update', $wallet), [
+            'notify_direction' => 'invalid',
+        ])
+        ->assertSessionHasErrors('notify_direction');
+});
+
+test('update accepts notify_cooldown_minutes', function () {
+    $user = User::factory()->create();
+    $network = Network::factory()->ethereum()->create();
+    $wallet = Wallet::factory()->for($network)->create();
+    $user->wallets()->attach($wallet->id);
+
+    $this->actingAs($user)
+        ->patch(route('watchlist.update', $wallet), [
+            'notify_cooldown_minutes' => 60,
+        ])
+        ->assertRedirect();
+
+    $pivot = $user->wallets()->where('wallet_id', $wallet->id)->first()->pivot;
+    expect((int) $pivot->notify_cooldown_minutes)->toBe(60);
+});
+
+test('update rejects cooldown exceeding max', function () {
+    $user = User::factory()->create();
+    $network = Network::factory()->ethereum()->create();
+    $wallet = Wallet::factory()->for($network)->create();
+    $user->wallets()->attach($wallet->id);
+
+    $this->actingAs($user)
+        ->patch(route('watchlist.update', $wallet), [
+            'notify_cooldown_minutes' => 99999,
+        ])
+        ->assertSessionHasErrors('notify_cooldown_minutes');
+});
+
+test('update accepts notes field', function () {
+    $user = User::factory()->create();
+    $network = Network::factory()->ethereum()->create();
+    $wallet = Wallet::factory()->for($network)->create();
+    $user->wallets()->attach($wallet->id);
+
+    $this->actingAs($user)
+        ->patch(route('watchlist.update', $wallet), [
+            'notes' => 'This is a whale wallet I am watching.',
+        ])
+        ->assertRedirect();
+
+    $pivot = $user->wallets()->where('wallet_id', $wallet->id)->first()->pivot;
+    expect($pivot->notes)->toBe('This is a whale wallet I am watching.');
+});
+
+test('update rejects notes exceeding max length', function () {
+    $user = User::factory()->create();
+    $network = Network::factory()->ethereum()->create();
+    $wallet = Wallet::factory()->for($network)->create();
+    $user->wallets()->attach($wallet->id);
+
+    $this->actingAs($user)
+        ->patch(route('watchlist.update', $wallet), [
+            'notes' => str_repeat('a', 5001),
+        ])
+        ->assertSessionHasErrors('notes');
+});

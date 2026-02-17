@@ -24,6 +24,10 @@ export interface WatchlistWallet {
         custom_label: string | null;
         is_notified: boolean;
         notify_threshold_usd: string | null;
+        notify_direction: 'all' | 'incoming' | 'outgoing';
+        notify_cooldown_minutes: number | null;
+        last_notified_at: string | null;
+        notes: string | null;
     };
 }
 

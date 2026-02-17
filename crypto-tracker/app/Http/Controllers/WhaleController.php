@@ -20,10 +20,15 @@ class WhaleController extends Controller
         $whales = $query->orderByDesc('balance_usd')->get();
         $networks = Network::where('is_active', true)->orderBy('name')->get(['id', 'name', 'slug', 'currency_symbol']);
 
+        $trackedWhaleIds = $request->user()
+            ? $request->user()->wallets()->pluck('wallet_id')->toArray()
+            : [];
+
         return Inertia::render('Whales', [
             'whales' => $whales,
             'networks' => $networks,
             'activeNetwork' => $network,
+            'trackedWhaleIds' => $trackedWhaleIds,
         ]);
     }
 }

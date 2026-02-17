@@ -130,6 +130,10 @@ class ProcessCryptoWebhook implements ShouldQueue
         $amountNative = (float) $transaction->amount;
         $amountUsd = $amountNative * $priceUsd;
 
+        $walletAddress = strtolower($wallet->address);
+        $isIncoming = strtolower($transaction->to_address) === $walletAddress;
+        $isOutgoing = strtolower($transaction->from_address) === $walletAddress;
+
         $usersToNotify = $wallet->users()
             ->wherePivot('is_notified', true)
             ->wherePivotNotNull('notify_threshold_usd')
@@ -138,20 +142,46 @@ class ProcessCryptoWebhook implements ShouldQueue
         foreach ($usersToNotify as $user) {
             $threshold = (float) $user->pivot->notify_threshold_usd;
 
-            if ($amountUsd >= $threshold) {
-                $user->notify(new WalletThresholdAlert(
-                    $wallet,
-                    $transaction,
-                    number_format($amountUsd, 2, '.', ''),
-                ));
-
-                Log::info('ProcessCryptoWebhook: threshold alert sent', [
-                    'user_id' => $user->id,
-                    'wallet_id' => $wallet->id,
-                    'amount_usd' => $amountUsd,
-                    'threshold' => $threshold,
-                ]);
+            if ($amountUsd < $threshold) {
+                continue;
             }
+
+            // Direction filter
+            $direction = $user->pivot->notify_direction ?? 'all';
+            if ($direction === 'incoming' && !$isIncoming) {
+                continue;
+            }
+            if ($direction === 'outgoing' && !$isOutgoing) {
+                continue;
+            }
+
+            // Cooldown check
+            $cooldown = $user->pivot->notify_cooldown_minutes;
+            $lastNotified = $user->pivot->last_notified_at;
+            if ($cooldown && $lastNotified) {
+                $lastNotifiedAt = Carbon::parse($lastNotified);
+                if ($lastNotifiedAt->addMinutes($cooldown)->isFuture()) {
+                    continue;
+                }
+            }
+
+            $user->notify(new WalletThresholdAlert(
+                $wallet,
+                $transaction,
+                number_format($amountUsd, 2, '.', ''),
+            ));
+
+            // Update last_notified_at on the pivot
+            $wallet->users()->updateExistingPivot($user->id, [
+                'last_notified_at' => now(),
+            ]);
+
+            Log::info('ProcessCryptoWebhook: threshold alert sent', [
+                'user_id' => $user->id,
+                'wallet_id' => $wallet->id,
+                'amount_usd' => $amountUsd,
+                'threshold' => $threshold,
+            ]);
         }
     }
 
