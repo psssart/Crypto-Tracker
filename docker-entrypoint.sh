@@ -27,14 +27,12 @@ if [ "$1" = "php-fpm" ]; then
     echo "  still waiting…"
   done
 
-  # Local-only fresh migrate + seed (your existing behavior)
+  echo "››› Running pending migrations…"
+  php artisan migrate --force
+
   if [ "$APP_ENV" = "local" ]; then
-    MARKER=/var/www/storage/.initialized
-    if [ ! -f "$MARKER" ]; then
-      echo "››› Running migrate:fresh --seed (local only)…"
-      php artisan migrate:fresh --seed --force
-      touch "$MARKER"
-    fi
+    echo "››› Running seeders (idempotent)…"
+    php artisan db:seed --force
   fi
 fi
 
