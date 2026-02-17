@@ -143,7 +143,11 @@ export default function Watchlist({ wallets, networks }: Props) {
         custom_label: '',
     });
 
-    const editForm = useForm({
+    const editForm = useForm<{
+        custom_label: string;
+        is_notified: boolean;
+        notify_threshold_usd: string;
+    }>({
         custom_label: '',
         is_notified: false,
         notify_threshold_usd: '',
