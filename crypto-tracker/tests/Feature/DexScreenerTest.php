@@ -5,23 +5,19 @@ use App\Exceptions\ApiResponseException;
 use App\Services\ApiService;
 use Illuminate\Http\Client\Response;
 
-// ── Authentication ───────────────────────────────────────────────────
+// ── Public Access ────────────────────────────────────────────────────
 
-test('dexscreener endpoints require authentication', function (string $routeName) {
+test('dexscreener endpoints are publicly accessible', function (string $routeName) {
+    $mockResponse = Mockery::mock(\Illuminate\Http\Client\Response::class);
+    $mockResponse->shouldReceive('json')->andReturn([]);
+
+    $this->mock(ApiService::class)
+        ->shouldReceive('get')
+        ->once()
+        ->andReturn($mockResponse);
+
     $this->getJson(route($routeName))
-        ->assertUnauthorized();
-})->with([
-    'dex.latestTokenProfiles',
-    'dex.getLatestBoostedTokens',
-    'dex.getMostBoostedTokens',
-]);
-
-test('dexscreener endpoints require verified email', function (string $routeName) {
-    $user = User::factory()->unverified()->create();
-
-    $this->actingAs($user)
-        ->get(route($routeName))
-        ->assertRedirect(route('verification.notice'));
+        ->assertOk();
 })->with([
     'dex.latestTokenProfiles',
     'dex.getLatestBoostedTokens',
