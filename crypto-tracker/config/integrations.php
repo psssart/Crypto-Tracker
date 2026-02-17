@@ -61,6 +61,51 @@ return [
             'ws_source_id' => 'bybit',
         ],
 
+        'moralis' => [
+            'name' => 'Moralis',
+            'description' => 'Web3 data API for wallet balances, NFTs, and transaction history.',
+            'docs_url' => 'https://docs.moralis.io/',
+            'secret_field' => [
+                'key' => 'api_key',
+                'label' => 'API key',
+                'help' => 'Get your API key from the Moralis admin panel.',
+            ],
+            'default_settings' => [],
+            'health_check' => [
+                'enabled' => false,
+            ],
+        ],
+
+        'alchemy' => [
+            'name' => 'Alchemy',
+            'description' => 'Blockchain infrastructure and developer tools.',
+            'docs_url' => 'https://docs.alchemy.com/',
+            'secret_field' => [
+                'key' => 'api_key',
+                'label' => 'API key',
+                'help' => 'Create an app in Alchemy dashboard and copy the API key.',
+            ],
+            'default_settings' => [],
+            'health_check' => [
+                'enabled' => false,
+            ],
+        ],
+
+        'etherscan' => [
+            'name' => 'Etherscan',
+            'description' => 'Ethereum blockchain explorer API for contract and transaction data.',
+            'docs_url' => 'https://docs.etherscan.io/',
+            'secret_field' => [
+                'key' => 'api_key',
+                'label' => 'API key',
+                'help' => 'Generate a free API key from your Etherscan account.',
+            ],
+            'default_settings' => [],
+            'health_check' => [
+                'enabled' => false,
+            ],
+        ],
+
         'openai' => [
             'name' => 'OpenAI',
             'description' => 'LLM responses (text, tools, structured output).',

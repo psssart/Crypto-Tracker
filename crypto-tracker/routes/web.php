@@ -5,6 +5,9 @@ use App\Http\Controllers\DexScreenerController;
 use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\OpenAIController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\WatchlistController;
+use App\Http\Controllers\WebhookController;
+use App\Http\Controllers\WhaleController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -17,6 +20,10 @@ Route::get('/', function () {
         'phpVersion' => PHP_VERSION,
     ]);
 });
+
+Route::get('/whales', [WhaleController::class, 'index'])->name('whales');
+
+Route::post('/webhooks/crypto', [WebhookController::class, 'handle'])->name('webhooks.crypto');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -45,6 +52,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/chart/check-source', [ChartController::class, 'checkSource'])->name('chart.checkSource');
 
     Route::post('/openai/respond', [OpenAIController::class, 'respond']);
+
+    Route::get('/watchlist', [WatchlistController::class, 'index'])->name('watchlist.index');
+    Route::post('/watchlist', [WatchlistController::class, 'store'])->name('watchlist.store');
+    Route::patch('/watchlist/{wallet}', [WatchlistController::class, 'update'])->name('watchlist.update');
+    Route::delete('/watchlist/{wallet}', [WatchlistController::class, 'destroy'])->name('watchlist.destroy');
 });
 
 require __DIR__.'/auth.php';

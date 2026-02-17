@@ -62,4 +62,11 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(UserIntegration::class);
     }
+
+    public function wallets()
+    {
+        return $this->belongsToMany(Wallet::class, 'user_wallet')
+            ->withPivot('custom_label', 'is_notified', 'notify_threshold_usd')
+            ->withTimestamps();
+    }
 }

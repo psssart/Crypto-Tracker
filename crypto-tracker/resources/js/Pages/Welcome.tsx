@@ -28,6 +28,12 @@ export default function Welcome({ auth }: PageProps) {
                             >
                                 Chart
                             </Link>
+                            <Link
+                                href={route('whales')}
+                                className="bg-white/80 text-black font-semibold px-4 py-2 rounded-lg hover:bg-white transition"
+                            >
+                                Whales
+                            </Link>
                         </>
                     ) : (
                         <>
@@ -42,6 +48,12 @@ export default function Welcome({ auth }: PageProps) {
                                 className="bg-white/80 text-black font-semibold px-4 py-2 rounded-lg hover:bg-white transition"
                             >
                                 Register
+                            </Link>
+                            <Link
+                                href={route('whales')}
+                                className="bg-white/80 text-black font-semibold px-4 py-2 rounded-lg hover:bg-white transition"
+                            >
+                                Whales
                             </Link>
                         </>
                     )}

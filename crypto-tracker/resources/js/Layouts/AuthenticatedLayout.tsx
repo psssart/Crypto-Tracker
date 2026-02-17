@@ -64,6 +64,12 @@ export default function Authenticated({
                                 >
                                     Chart
                                 </NavLink>
+                                <NavLink
+                                    href={route('watchlist.index')}
+                                    active={route().current('watchlist.index')}
+                                >
+                                    Watchlist
+                                </NavLink>
                             </div>
                         </div>
 
@@ -178,6 +184,12 @@ export default function Authenticated({
                           active={route().current('chart')}
                         >
                           Chart
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                          href={route('watchlist.index')}
+                          active={route().current('watchlist.index')}
+                        >
+                          Watchlist
                         </ResponsiveNavLink>
                     </div>
 
