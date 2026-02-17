@@ -35,4 +35,20 @@ return [
         ],
     ],
 
+    'moralis' => [
+        'api_key' => env('MORALIS_API_KEY'),
+    ],
+
+    'alchemy' => [
+        'key' => env('ALCHEMY_API_KEY'),
+    ],
+
+    'coingecko' => [
+        'key' => env('COINGECKO_API_KEY'),
+    ],
+
+    'etherscan' => [
+        'key' => env('ETHERSCAN_API_KEY'),
+    ],
+
 ];
