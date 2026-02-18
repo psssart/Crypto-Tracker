@@ -5,6 +5,7 @@ use App\Http\Controllers\DexScreenerController;
 use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\OpenAIController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WatchlistController;
 use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\WhaleController;
@@ -58,6 +59,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/watchlist', [WatchlistController::class, 'store'])->name('watchlist.store');
     Route::patch('/watchlist/{wallet}', [WatchlistController::class, 'update'])->name('watchlist.update');
     Route::delete('/watchlist/{wallet}', [WatchlistController::class, 'destroy'])->name('watchlist.destroy');
+
+    Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions.index');
 });
 
 require __DIR__.'/auth.php';
