@@ -13,7 +13,7 @@ export default function PublicLayout({ children }: PropsWithChildren) {
             }}
         >
             {/* Navigation */}
-            <nav className="flex items-center justify-between px-6 py-4">
+            <nav className="flex flex-wrap gap-3 items-center justify-between px-6 py-4">
                 <div className="flex gap-4">
                     <Link
                         href={route('dashboard')}

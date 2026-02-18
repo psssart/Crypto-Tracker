@@ -1,7 +1,7 @@
 import { flashError } from '@/Components/FlashMessages';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { Network, PageProps, WhaleWallet } from '@/types';
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 
 interface Props extends PageProps {
@@ -148,6 +148,12 @@ function WhaleCard({
                                 </svg>
                             </a>
                         )}
+                        <Link
+                            href={route('whales.transactions', whale.id)}
+                            className="rounded border border-white/20 px-2 py-0.5 text-xs text-white/50 transition hover:border-white/40 hover:text-white/80"
+                        >
+                            Transactions
+                        </Link>
                     </div>
                 </div>
             </div>

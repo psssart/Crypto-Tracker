@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Network;
+use App\Models\Transaction;
 use App\Models\Wallet;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -29,6 +30,24 @@ class WhaleController extends Controller
             'networks' => $networks,
             'activeNetwork' => $network,
             'trackedWhaleIds' => $trackedWhaleIds,
+        ]);
+    }
+
+    public function transactions(Wallet $wallet)
+    {
+        abort_unless($wallet->is_whale, 404);
+
+        $wallet->load('network');
+
+        $transactions = Transaction::where('wallet_id', $wallet->id)
+            ->orderByDesc('mined_at')
+            ->orderByDesc('id')
+            ->limit(100)
+            ->get();
+
+        return Inertia::render('WhaleTransactions', [
+            'wallet' => $wallet,
+            'transactions' => $transactions,
         ]);
     }
 }

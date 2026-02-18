@@ -13,16 +13,8 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
-});
-
-Route::get('/whales', [WhaleController::class, 'index'])->name('whales');
+Route::get('/', [WhaleController::class, 'index'])->name('whales');
+Route::get('/whales/{wallet}/transactions', [WhaleController::class, 'transactions'])->name('whales.transactions');
 
 Route::post('/webhooks/crypto', [WebhookController::class, 'handle'])->name('webhooks.crypto');
 
