@@ -1,7 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { Network, WatchlistWallet } from '@/types';
-import { FormEventHandler, useState } from 'react';
+import { FormEventHandler, useEffect, useRef, useState } from 'react';
 
 interface Props {
     wallets: WatchlistWallet[];
@@ -14,6 +14,25 @@ function truncateAddress(address: string): string {
 
 function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text);
+}
+
+function isValidAddress(address: string, networkSlug: string): boolean {
+    const trimmed = address.trim();
+    if (!trimmed) return false;
+    switch (networkSlug) {
+        case 'ethereum':
+        case 'polygon':
+        case 'bsc':
+            return /^0x[0-9a-fA-F]{40}$/.test(trimmed);
+        case 'solana':
+            return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(trimmed);
+        case 'bitcoin':
+            return /^(1[a-km-zA-HJ-NP-Z1-9]{25,34}|3[a-km-zA-HJ-NP-Z1-9]{25,34}|bc1[a-z0-9]{39,59})$/.test(
+                trimmed,
+            );
+        default:
+            return trimmed.length > 0;
+    }
 }
 
 function WalletCard({
@@ -91,7 +110,11 @@ function WalletCard({
                         )}
                     </div>
                     <div className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">
-                        ${parseFloat(wallet.balance_usd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        $
+                        {parseFloat(wallet.balance_usd).toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                        })}
                     </div>
                     <div className="mt-1 flex flex-wrap gap-1">
                         {wallet.pivot.notify_direction !== 'all' && (
@@ -167,11 +190,34 @@ function WalletCard({
 
 export default function Watchlist({ wallets, networks }: Props) {
     const [editingWallet, setEditingWallet] = useState<WatchlistWallet | null>(null);
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [addressStatus, setAddressStatus] = useState<'idle' | 'validating' | 'valid' | 'invalid'>(
+        'idle',
+    );
+    const [showAddAdvanced, setShowAddAdvanced] = useState(false);
+    const [showEditAdvanced, setShowEditAdvanced] = useState(false);
+    const validationTimer = useRef<ReturnType<typeof setTimeout>>();
 
-    const addForm = useForm({
+    const addForm = useForm<{
+        network_id: string;
+        address: string;
+        custom_label: string;
+        is_notified: boolean;
+        notify_threshold_usd: string;
+        notify_via: string;
+        notify_direction: string;
+        notify_cooldown_minutes: string;
+        notes: string;
+    }>({
         network_id: '',
         address: '',
         custom_label: '',
+        is_notified: false,
+        notify_threshold_usd: '',
+        notify_via: 'email',
+        notify_direction: 'all',
+        notify_cooldown_minutes: '',
+        notes: '',
     });
 
     const editForm = useForm<{
@@ -192,11 +238,34 @@ export default function Watchlist({ wallets, networks }: Props) {
         notes: '',
     });
 
+    const selectedNetwork = networks.find((n) => n.id.toString() === addForm.data.network_id);
+
+    useEffect(() => {
+        const address = addForm.data.address.trim();
+        if (!address || !selectedNetwork) {
+            setAddressStatus('idle');
+            return;
+        }
+
+        setAddressStatus('validating');
+        clearTimeout(validationTimer.current);
+        validationTimer.current = setTimeout(() => {
+            setAddressStatus(isValidAddress(address, selectedNetwork.slug) ? 'valid' : 'invalid');
+        }, 300);
+
+        return () => clearTimeout(validationTimer.current);
+    }, [addForm.data.address, addForm.data.network_id]);
+
     const handleAdd: FormEventHandler = (e) => {
         e.preventDefault();
+        if (addressStatus !== 'valid') return;
         addForm.post(route('watchlist.store'), {
             preserveScroll: true,
-            onSuccess: () => addForm.reset(),
+            onSuccess: () => {
+                addForm.reset();
+                setAddressStatus('idle');
+                setShowAddAdvanced(false);
+            },
         });
     };
 
@@ -218,6 +287,7 @@ export default function Watchlist({ wallets, networks }: Props) {
 
     const startEdit = (wallet: WatchlistWallet) => {
         setEditingWallet(wallet);
+        setShowEditAdvanced(false);
         editForm.setData({
             custom_label: wallet.pivot.custom_label || '',
             is_notified: wallet.pivot.is_notified,
@@ -239,84 +309,378 @@ export default function Watchlist({ wallets, networks }: Props) {
         >
             <Head title="Watchlist" />
 
-            <div className="py-12">
+            <div className="py-6">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    {/* Add Wallet Form */}
-                    <div className="mb-6 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
-                        <div className="p-6">
-                            <h3 className="mb-4 text-lg font-medium text-gray-900 dark:text-white">
-                                Add Wallet
-                            </h3>
-                            <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-4">
-                                <div className="w-full sm:w-auto">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Network
-                                    </label>
-                                    <select
-                                        value={addForm.data.network_id}
-                                        onChange={(e) => addForm.setData('network_id', e.target.value)}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                    >
-                                        <option value="">Select network</option>
-                                        {networks.map((n) => (
-                                            <option key={n.id} value={n.id}>
-                                                {n.name} ({n.currency_symbol})
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {addForm.errors.network_id && (
-                                        <p className="mt-1 text-sm text-red-600">{addForm.errors.network_id}</p>
-                                    )}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Address
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={addForm.data.address}
-                                        onChange={(e) => addForm.setData('address', e.target.value)}
-                                        placeholder="0x..."
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                    />
-                                    {addForm.errors.address && (
-                                        <p className="mt-1 text-sm text-red-600">{addForm.errors.address}</p>
-                                    )}
-                                </div>
-                                <div className="w-full sm:w-48">
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Label (optional)
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={addForm.data.custom_label}
-                                        onChange={(e) => addForm.setData('custom_label', e.target.value)}
-                                        placeholder="My wallet"
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                    />
-                                </div>
-                                <button
-                                    type="submit"
-                                    disabled={addForm.processing}
-                                    className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+                    {/* Add Wallet - Collapsible */}
+                    <div className="mb-6">
+                        {!showAddForm ? (
+                            <button
+                                onClick={() => setShowAddForm(true)}
+                                className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 px-4 py-3 text-sm font-medium text-gray-500 transition-colors hover:border-indigo-400 hover:text-indigo-600 dark:border-gray-600 dark:text-gray-400 dark:hover:border-indigo-500 dark:hover:text-indigo-400"
+                            >
+                                <svg
+                                    className="h-5 w-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
                                 >
-                                    Add
-                                </button>
-                            </form>
-                        </div>
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 4v16m8-8H4"
+                                    />
+                                </svg>
+                                Add Wallet
+                            </button>
+                        ) : (
+                            <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
+                                <div className="p-4">
+                                    <form onSubmit={handleAdd} className="space-y-3">
+                                        <div className="flex flex-wrap items-end gap-3">
+                                            <div className="w-full sm:w-auto">
+                                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                    Network
+                                                </label>
+                                                <select
+                                                    value={addForm.data.network_id}
+                                                    onChange={(e) =>
+                                                        addForm.setData(
+                                                            'network_id',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                >
+                                                    <option value="">Select network</option>
+                                                    {networks.map((n) => (
+                                                        <option key={n.id} value={n.id}>
+                                                            {n.name} ({n.currency_symbol})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                {addForm.errors.network_id && (
+                                                    <p className="mt-1 text-xs text-red-600">
+                                                        {addForm.errors.network_id}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="min-w-40 flex-1">
+                                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                    Address
+                                                </label>
+                                                <div className="relative mt-1">
+                                                    <input
+                                                        type="text"
+                                                        value={addForm.data.address}
+                                                        onChange={(e) =>
+                                                            addForm.setData(
+                                                                'address',
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        placeholder="0x..."
+                                                        className={`block w-full rounded-md py-1.5 pr-8 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white ${
+                                                            addressStatus === 'valid'
+                                                                ? 'border-green-400 dark:border-green-500'
+                                                                : addressStatus === 'invalid'
+                                                                  ? 'border-red-400 dark:border-red-500'
+                                                                  : 'border-gray-300 dark:border-gray-600'
+                                                        }`}
+                                                    />
+                                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                                                        {addressStatus === 'validating' && (
+                                                            <svg
+                                                                className="h-4 w-4 animate-spin text-gray-400"
+                                                                fill="none"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <circle
+                                                                    className="opacity-25"
+                                                                    cx="12"
+                                                                    cy="12"
+                                                                    r="10"
+                                                                    stroke="currentColor"
+                                                                    strokeWidth="4"
+                                                                />
+                                                                <path
+                                                                    className="opacity-75"
+                                                                    fill="currentColor"
+                                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                                                                />
+                                                            </svg>
+                                                        )}
+                                                        {addressStatus === 'valid' && (
+                                                            <svg
+                                                                className="h-4 w-4 text-green-500"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M5 13l4 4L19 7"
+                                                                />
+                                                            </svg>
+                                                        )}
+                                                        {addressStatus === 'invalid' && (
+                                                            <svg
+                                                                className="h-4 w-4 text-red-500"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M6 18L18 6M6 6l12 12"
+                                                                />
+                                                            </svg>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                {addForm.errors.address && (
+                                                    <p className="mt-1 text-xs text-red-600">
+                                                        {addForm.errors.address}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="w-full sm:w-36">
+                                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                    Label (optional)
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={addForm.data.custom_label}
+                                                    onChange={(e) =>
+                                                        addForm.setData(
+                                                            'custom_label',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="My wallet"
+                                                    className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-1.5 pb-2">
+                                                <input
+                                                    type="checkbox"
+                                                    id="add_is_notified"
+                                                    checked={addForm.data.is_notified}
+                                                    onChange={(e) =>
+                                                        addForm.setData(
+                                                            'is_notified',
+                                                            e.target.checked,
+                                                        )
+                                                    }
+                                                    className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600"
+                                                />
+                                                <label
+                                                    htmlFor="add_is_notified"
+                                                    className="text-xs text-gray-700 dark:text-gray-300"
+                                                >
+                                                    Notifications
+                                                </label>
+                                            </div>
+                                            {addForm.data.is_notified && (
+                                                <div className="w-full sm:w-36">
+                                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                        Notify via
+                                                    </label>
+                                                    <select
+                                                        value={addForm.data.notify_via}
+                                                        onChange={(e) =>
+                                                            addForm.setData(
+                                                                'notify_via',
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                    >
+                                                        <option value="email">Email</option>
+                                                        <option value="telegram">Telegram</option>
+                                                        <option value="both">Both</option>
+                                                    </select>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Advanced Settings Toggle */}
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowAddAdvanced(!showAddAdvanced)}
+                                            className="flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                        >
+                                            <svg
+                                                className={`h-3 w-3 transition-transform ${showAddAdvanced ? 'rotate-90' : ''}`}
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={2}
+                                                    d="M9 5l7 7-7 7"
+                                                />
+                                            </svg>
+                                            Advanced Settings
+                                        </button>
+
+                                        {showAddAdvanced && (
+                                            <div className="space-y-3">
+                                                {addForm.data.is_notified && (
+                                                    <div className="flex flex-wrap items-end gap-3">
+                                                        <div className="w-full sm:w-36">
+                                                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                                Threshold (USD)
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                step="any"
+                                                                value={
+                                                                    addForm.data
+                                                                        .notify_threshold_usd
+                                                                }
+                                                                onChange={(e) =>
+                                                                    addForm.setData(
+                                                                        'notify_threshold_usd',
+                                                                        e.target.value,
+                                                                    )
+                                                                }
+                                                                className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                            />
+                                                        </div>
+                                                        <div className="w-full sm:w-36">
+                                                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                                Direction
+                                                            </label>
+                                                            <select
+                                                                value={
+                                                                    addForm.data.notify_direction
+                                                                }
+                                                                onChange={(e) =>
+                                                                    addForm.setData(
+                                                                        'notify_direction',
+                                                                        e.target.value,
+                                                                    )
+                                                                }
+                                                                className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                            >
+                                                                <option value="all">All</option>
+                                                                <option value="incoming">
+                                                                    Incoming
+                                                                </option>
+                                                                <option value="outgoing">
+                                                                    Outgoing
+                                                                </option>
+                                                            </select>
+                                                        </div>
+                                                        <div className="w-full sm:w-36">
+                                                            <label className="flex items-center gap-1 text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                                Cooldown
+                                                                <svg
+                                                                    className="h-3 w-3 text-gray-400"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    viewBox="0 0 24 24"
+                                                                >
+                                                                    <title>
+                                                                        Minimum minutes between
+                                                                        alerts
+                                                                    </title>
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth={2}
+                                                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                                    />
+                                                                </svg>
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                max="10080"
+                                                                value={
+                                                                    addForm.data
+                                                                        .notify_cooldown_minutes
+                                                                }
+                                                                onChange={(e) =>
+                                                                    addForm.setData(
+                                                                        'notify_cooldown_minutes',
+                                                                        e.target.value,
+                                                                    )
+                                                                }
+                                                                placeholder="No limit"
+                                                                className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                        Notes
+                                                    </label>
+                                                    <textarea
+                                                        value={addForm.data.notes}
+                                                        onChange={(e) =>
+                                                            addForm.setData(
+                                                                'notes',
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        rows={2}
+                                                        placeholder="Personal notes about this wallet..."
+                                                        className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="submit"
+                                                disabled={
+                                                    addForm.processing ||
+                                                    addressStatus !== 'valid'
+                                                }
+                                                className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+                                            >
+                                                Add
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowAddForm(false);
+                                                    addForm.reset();
+                                                    setAddressStatus('idle');
+                                                    setShowAddAdvanced(false);
+                                                }}
+                                                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Edit Modal */}
                     {editingWallet && (
                         <div className="mb-6 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
-                            <div className="p-6">
-                                <h3 className="mb-4 text-lg font-medium text-gray-900 dark:text-white">
+                            <div className="p-4">
+                                <h3 className="mb-3 text-sm font-medium text-gray-900 dark:text-white">
                                     Edit: {truncateAddress(editingWallet.address)}
                                 </h3>
-                                <form onSubmit={handleEdit} className="space-y-4">
-                                    <div className="flex flex-wrap items-end gap-4">
-                                        <div className="w-full sm:w-48">
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <form onSubmit={handleEdit} className="space-y-3">
+                                    <div className="flex flex-wrap items-end gap-3">
+                                        <div className="w-full sm:w-40">
+                                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
                                                 Label
                                             </label>
                                             <input
@@ -325,37 +689,43 @@ export default function Watchlist({ wallets, networks }: Props) {
                                                 onChange={(e) =>
                                                     editForm.setData('custom_label', e.target.value)
                                                 }
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                             />
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1.5 pb-2">
                                             <input
                                                 type="checkbox"
                                                 id="is_notified"
                                                 checked={editForm.data.is_notified}
                                                 onChange={(e) =>
-                                                    editForm.setData('is_notified', e.target.checked)
+                                                    editForm.setData(
+                                                        'is_notified',
+                                                        e.target.checked,
+                                                    )
                                                 }
-                                                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600"
+                                                className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600"
                                             />
                                             <label
                                                 htmlFor="is_notified"
-                                                className="text-sm text-gray-700 dark:text-gray-300"
+                                                className="text-xs text-gray-700 dark:text-gray-300"
                                             >
                                                 Notifications
                                             </label>
                                         </div>
                                         {editForm.data.is_notified && (
-                                            <div className="w-full sm:w-48">
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                            <div className="w-full sm:w-36">
+                                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
                                                     Notify via
                                                 </label>
                                                 <select
                                                     value={editForm.data.notify_via}
                                                     onChange={(e) =>
-                                                        editForm.setData('notify_via', e.target.value)
+                                                        editForm.setData(
+                                                            'notify_via',
+                                                            e.target.value,
+                                                        )
                                                     }
-                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                    className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                                 >
                                                     <option value="email">Email</option>
                                                     <option value="telegram">Telegram</option>
@@ -363,97 +733,147 @@ export default function Watchlist({ wallets, networks }: Props) {
                                                 </select>
                                             </div>
                                         )}
-                                        <div className="w-full sm:w-48">
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                Threshold (USD)
-                                            </label>
-                                            <input
-                                                type="number"
-                                                step="any"
-                                                value={editForm.data.notify_threshold_usd}
-                                                onChange={(e) =>
-                                                    editForm.setData(
-                                                        'notify_threshold_usd',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                            />
-                                        </div>
-                                        <div className="w-full sm:w-48">
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                Direction
-                                            </label>
-                                            <select
-                                                value={editForm.data.notify_direction}
-                                                onChange={(e) =>
-                                                    editForm.setData('notify_direction', e.target.value)
-                                                }
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                            >
-                                                <option value="all">All</option>
-                                                <option value="incoming">Incoming</option>
-                                                <option value="outgoing">Outgoing</option>
-                                            </select>
-                                        </div>
-                                        <div className="w-full sm:w-48">
-                                            <label className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                Cooldown
-                                                <svg
-                                                    className="h-4 w-4 text-gray-400"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <title>Minimum minutes between alerts for this wallet</title>
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        strokeWidth={2}
-                                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                    />
-                                                </svg>
-                                            </label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                max="10080"
-                                                value={editForm.data.notify_cooldown_minutes}
-                                                onChange={(e) =>
-                                                    editForm.setData(
-                                                        'notify_cooldown_minutes',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                placeholder="No limit"
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                            />
-                                        </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            Notes
-                                        </label>
-                                        <textarea
-                                            value={editForm.data.notes}
-                                            onChange={(e) => editForm.setData('notes', e.target.value)}
-                                            rows={2}
-                                            placeholder="Personal notes about this wallet..."
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                        />
-                                    </div>
+
+                                    {/* Advanced Settings Toggle */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowEditAdvanced(!showEditAdvanced)}
+                                        className="flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                    >
+                                        <svg
+                                            className={`h-3 w-3 transition-transform ${showEditAdvanced ? 'rotate-90' : ''}`}
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M9 5l7 7-7 7"
+                                            />
+                                        </svg>
+                                        Advanced Settings
+                                    </button>
+
+                                    {showEditAdvanced && (
+                                        <div className="space-y-3">
+                                            {editForm.data.is_notified && (
+                                                <div className="flex flex-wrap items-end gap-3">
+                                                    <div className="w-full sm:w-36">
+                                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                            Threshold (USD)
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            step="any"
+                                                            value={
+                                                                editForm.data.notify_threshold_usd
+                                                            }
+                                                            onChange={(e) =>
+                                                                editForm.setData(
+                                                                    'notify_threshold_usd',
+                                                                    e.target.value,
+                                                                )
+                                                            }
+                                                            className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                        />
+                                                    </div>
+                                                    <div className="w-full sm:w-36">
+                                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                            Direction
+                                                        </label>
+                                                        <select
+                                                            value={
+                                                                editForm.data.notify_direction
+                                                            }
+                                                            onChange={(e) =>
+                                                                editForm.setData(
+                                                                    'notify_direction',
+                                                                    e.target.value,
+                                                                )
+                                                            }
+                                                            className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                        >
+                                                            <option value="all">All</option>
+                                                            <option value="incoming">
+                                                                Incoming
+                                                            </option>
+                                                            <option value="outgoing">
+                                                                Outgoing
+                                                            </option>
+                                                        </select>
+                                                    </div>
+                                                    <div className="w-full sm:w-36">
+                                                        <label className="flex items-center gap-1 text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                            Cooldown
+                                                            <svg
+                                                                className="h-3 w-3 text-gray-400"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <title>
+                                                                    Minimum minutes between alerts
+                                                                </title>
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                                />
+                                                            </svg>
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max="10080"
+                                                            value={
+                                                                editForm.data
+                                                                    .notify_cooldown_minutes
+                                                            }
+                                                            onChange={(e) =>
+                                                                editForm.setData(
+                                                                    'notify_cooldown_minutes',
+                                                                    e.target.value,
+                                                                )
+                                                            }
+                                                            placeholder="No limit"
+                                                            className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                    Notes
+                                                </label>
+                                                <textarea
+                                                    value={editForm.data.notes}
+                                                    onChange={(e) =>
+                                                        editForm.setData('notes', e.target.value)
+                                                    }
+                                                    rows={2}
+                                                    placeholder="Personal notes about this wallet..."
+                                                    className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="flex gap-2">
                                         <button
                                             type="submit"
                                             disabled={editForm.processing}
-                                            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+                                            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
                                         >
                                             Save
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setEditingWallet(null)}
-                                            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                                            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                                         >
                                             Cancel
                                         </button>

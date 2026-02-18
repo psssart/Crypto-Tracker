@@ -33,6 +33,12 @@ class WatchlistController extends Controller
             'network_id' => 'required|exists:networks,id',
             'address' => 'required|string|max:255',
             'custom_label' => 'nullable|string|max:255',
+            'is_notified' => 'sometimes|boolean',
+            'notify_threshold_usd' => 'nullable|numeric|min:0',
+            'notify_via' => 'sometimes|in:email,telegram,both',
+            'notify_direction' => 'sometimes|in:all,incoming,outgoing',
+            'notify_cooldown_minutes' => 'nullable|integer|min:0|max:10080',
+            'notes' => 'nullable|string|max:5000',
         ]);
 
         $wallet = Wallet::firstOrCreate(
@@ -48,9 +54,11 @@ class WatchlistController extends Controller
             return back()->withErrors(['address' => 'This wallet is already in your watchlist.']);
         }
 
-        $user->wallets()->attach($wallet->id, [
-            'custom_label' => $validated['custom_label'] ?? null,
-        ]);
+        $pivotData = collect($validated)
+            ->only(['custom_label', 'is_notified', 'notify_threshold_usd', 'notify_via', 'notify_direction', 'notify_cooldown_minutes', 'notes'])
+            ->toArray();
+
+        $user->wallets()->attach($wallet->id, $pivotData);
 
         SyncWalletHistory::dispatch($wallet, $user->id);
 

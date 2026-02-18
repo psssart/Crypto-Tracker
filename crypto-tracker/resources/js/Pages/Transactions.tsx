@@ -317,7 +317,7 @@ export default function Transactions({
         >
             <Head title="Transactions" />
 
-            <div className="py-12">
+            <div className="py-6">
                 <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
                     <div className="mb-4">
                         <Link
