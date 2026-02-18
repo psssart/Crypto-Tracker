@@ -20,6 +20,7 @@ export interface WatchlistWallet {
     balance_usd: string;
     last_synced_at: string | null;
     is_whale: boolean;
+    transactions_count: number;
     network: Network;
     pivot: {
         custom_label: string | null;

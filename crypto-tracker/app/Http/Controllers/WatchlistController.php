@@ -15,6 +15,7 @@ class WatchlistController extends Controller
         $wallets = $request->user()
             ->wallets()
             ->with('network')
+            ->withCount('transactions')
             ->get();
 
         $networks = Network::where('is_active', true)
@@ -26,6 +27,8 @@ class WatchlistController extends Controller
             'networks' => $networks,
         ]);
     }
+
+    public const FREE_WALLET_LIMIT = 4;
 
     public function store(Request $request)
     {
@@ -41,14 +44,24 @@ class WatchlistController extends Controller
             'notes' => 'nullable|string|max:5000',
         ]);
 
+        $user = $request->user();
+
+        $hasWalletApiKeys = $user->integrations()
+            ->whereIn('provider', ['moralis', 'alchemy', 'etherscan'])
+            ->whereNull('revoked_at')
+            ->whereNotNull('api_key')
+            ->exists();
+
+        if (!$hasWalletApiKeys && $user->wallets()->count() >= self::FREE_WALLET_LIMIT) {
+            return back()->withErrors(['limit' => 'You have reached the free limit of ' . self::FREE_WALLET_LIMIT . ' tracked wallets. Configure your API keys in Integrations to track more.']);
+        }
+
         $wallet = Wallet::firstOrCreate(
             [
                 'network_id' => $validated['network_id'],
                 'address' => strtolower($validated['address']),
             ],
         );
-
-        $user = $request->user();
 
         if ($user->wallets()->where('wallet_id', $wallet->id)->exists()) {
             return back()->withErrors(['address' => 'This wallet is already in your watchlist.']);

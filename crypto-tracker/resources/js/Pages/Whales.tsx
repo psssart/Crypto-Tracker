@@ -1,6 +1,7 @@
+import { flashError } from '@/Components/FlashMessages';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { Network, PageProps, WhaleWallet } from '@/types';
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 
 interface Props extends PageProps {
@@ -61,14 +62,12 @@ function WhaleCard({
     copiedAddr,
     onCopy,
     isTracked,
-    isAuthenticated,
     onTrack,
 }: {
     whale: WhaleWallet;
     copiedAddr: string;
     onCopy: (addr: string) => void;
     isTracked: boolean;
-    isAuthenticated: boolean;
     onTrack: (whale: WhaleWallet) => void;
 }) {
     const explorer = explorerAddressUrl(whale.network, whale.address);
@@ -157,19 +156,18 @@ function WhaleCard({
                 <span className="text-xl font-bold text-white">
                     {formatUsd(whale.balance_usd)}
                 </span>
-                {isAuthenticated &&
-                    (isTracked ? (
-                        <span className="rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-300">
-                            Tracking
-                        </span>
-                    ) : (
-                        <button
-                            onClick={() => onTrack(whale)}
-                            className="rounded-full border border-white/20 px-3 py-1 text-xs font-medium text-white/70 transition hover:border-white/40 hover:text-white"
-                        >
-                            Track
-                        </button>
-                    ))}
+                {isTracked ? (
+                    <span className="rounded-full bg-green-500/20 px-3 py-1 text-xs font-medium text-green-300">
+                        Tracking
+                    </span>
+                ) : (
+                    <button
+                        onClick={() => onTrack(whale)}
+                        className="rounded-full border border-white/20 px-3 py-1 text-xs font-medium text-white/70 transition hover:border-white/40 hover:text-white"
+                    >
+                        Track
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -180,6 +178,10 @@ export default function Whales({ auth, whales, networks, activeNetwork, trackedW
     const [trackedIds, setTrackedIds] = useState<number[]>(trackedWhaleIds);
 
     const handleTrack = (whale: WhaleWallet) => {
+        if (!auth.user) {
+            router.visit(route('register'));
+            return;
+        }
         router.post(
             route('watchlist.store'),
             {
@@ -190,6 +192,22 @@ export default function Whales({ auth, whales, networks, activeNetwork, trackedW
             {
                 preserveScroll: true,
                 onSuccess: () => setTrackedIds((prev) => [...prev, whale.id]),
+                onError: (errors) => {
+                    if (errors.limit) {
+                        flashError(
+                            <span>
+                                You have reached the free limit of tracked wallets.{' '}
+                                <a
+                                    href={route('integrations.index')}
+                                    className="underline font-semibold"
+                                >
+                                    Configure your API keys
+                                </a>{' '}
+                                to track more.
+                            </span>,
+                        );
+                    }
+                },
             },
         );
     };
@@ -288,7 +306,6 @@ export default function Whales({ auth, whales, networks, activeNetwork, trackedW
                                         copyToClipboard(addr, setCopiedAddr)
                                     }
                                     isTracked={trackedIds.includes(whale.id)}
-                                    isAuthenticated={!!auth.user}
                                     onTrack={handleTrack}
                                 />
                             ))}

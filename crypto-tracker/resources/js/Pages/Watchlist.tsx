@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { flashError } from '@/Components/FlashMessages';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { Network, WatchlistWallet } from '@/types';
 import { FormEventHandler, useEffect, useRef, useState } from 'react';
@@ -139,49 +140,54 @@ function WalletCard({
                         </p>
                     )}
                 </div>
-                <div className="flex gap-1">
-                    <Link
-                        href={route('transactions.index', { wallet: wallet.id })}
-                        className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-                        title="Transactions"
-                    >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-                            />
-                        </svg>
-                    </Link>
-                    <button
-                        onClick={() => onEdit(wallet)}
-                        className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-                        title="Edit"
-                    >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                            />
-                        </svg>
-                    </button>
-                    <button
-                        onClick={() => onRemove(wallet)}
-                        className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                        title="Remove"
-                    >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                        </svg>
-                    </button>
+                <div className="flex flex-col items-end gap-1.5">
+                    <div className="flex gap-1">
+                        <Link
+                            href={route('transactions.index', { wallet: wallet.id })}
+                            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+                            title="Transactions"
+                        >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                                />
+                            </svg>
+                        </Link>
+                        <button
+                            onClick={() => onEdit(wallet)}
+                            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+                            title="Edit"
+                        >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
+                            </svg>
+                        </button>
+                        <button
+                            onClick={() => onRemove(wallet)}
+                            className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                            title="Remove"
+                        >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
+                            </svg>
+                        </button>
+                    </div>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                        {wallet.transactions_count} tx{wallet.transactions_count !== 1 ? 's' : ''}
+                    </span>
                 </div>
             </div>
         </div>
@@ -189,6 +195,7 @@ function WalletCard({
 }
 
 export default function Watchlist({ wallets, networks }: Props) {
+    const [networkFilter, setNetworkFilter] = useState('');
     const [editingWallet, setEditingWallet] = useState<WatchlistWallet | null>(null);
     const [showAddForm, setShowAddForm] = useState(false);
     const [addressStatus, setAddressStatus] = useState<'idle' | 'validating' | 'valid' | 'invalid'>(
@@ -266,6 +273,19 @@ export default function Watchlist({ wallets, networks }: Props) {
                 setAddressStatus('idle');
                 setShowAddAdvanced(false);
             },
+            onError: (errors) => {
+                if (errors.limit) {
+                    flashError(
+                        <span>
+                            You have reached the free limit of tracked wallets.{' '}
+                            <a href={route('integrations.index')} className="underline font-semibold">
+                                Configure your API keys
+                            </a>{' '}
+                            to track more.
+                        </span>,
+                    );
+                }
+            },
         });
     };
 
@@ -302,9 +322,27 @@ export default function Watchlist({ wallets, networks }: Props) {
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    Watchlist
-                </h2>
+                <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                        Watchlist
+                    </h2>
+                    {wallets.length > 0 && (
+                        <select
+                            value={networkFilter}
+                            onChange={(e) => setNetworkFilter(e.target.value)}
+                            className="rounded-md border-gray-300 py-1.5 pl-3 pr-8 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                        >
+                            <option value="">All networks</option>
+                            {networks
+                                .filter((n) => wallets.some((w) => w.network.id === n.id))
+                                .map((n) => (
+                                    <option key={n.id} value={n.id}>
+                                        {n.currency_symbol}
+                                    </option>
+                                ))}
+                        </select>
+                    )}
+                </div>
             }
         >
             <Head title="Watchlist" />
@@ -465,7 +503,7 @@ export default function Watchlist({ wallets, networks }: Props) {
                                                     className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                                 />
                                             </div>
-                                            <div className="flex items-center gap-1.5 pb-2">
+                                            <div className="flex items-center gap-1.5 pb-1">
                                                 <input
                                                     type="checkbox"
                                                     id="add_is_notified"
@@ -480,9 +518,10 @@ export default function Watchlist({ wallets, networks }: Props) {
                                                 />
                                                 <label
                                                     htmlFor="add_is_notified"
-                                                    className="text-xs text-gray-700 dark:text-gray-300"
+                                                    className="flex flex-col text-xs text-gray-700 dark:text-gray-300"
                                                 >
-                                                    Notifications
+                                                    <span>Notify about</span>
+                                                    <span>transactions</span>
                                                 </label>
                                             </div>
                                             {addForm.data.is_notified && (
@@ -533,9 +572,13 @@ export default function Watchlist({ wallets, networks }: Props) {
                                         {showAddAdvanced && (
                                             <div className="space-y-3">
                                                 {addForm.data.is_notified && (
-                                                    <div className="flex flex-wrap items-end gap-3">
+                                                    <div className="flex flex-wrap items-end gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
+                                                        <div className="w-full">
+                                                            <h6 className="text-sm">Notification settings</h6>
+                                                        </div>
                                                         <div className="w-full sm:w-36">
-                                                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                            <label
+                                                                className="block text-xs font-medium text-gray-700 dark:text-gray-300">
                                                                 Threshold (USD)
                                                             </label>
                                                             <input
@@ -555,7 +598,8 @@ export default function Watchlist({ wallets, networks }: Props) {
                                                             />
                                                         </div>
                                                         <div className="w-full sm:w-36">
-                                                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                            <label
+                                                                className="block text-xs font-medium text-gray-700 dark:text-gray-300">
                                                                 Direction
                                                             </label>
                                                             <select
@@ -580,7 +624,8 @@ export default function Watchlist({ wallets, networks }: Props) {
                                                             </select>
                                                         </div>
                                                         <div className="w-full sm:w-36">
-                                                            <label className="flex items-center gap-1 text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                            <label
+                                                                className="flex items-center gap-1 text-xs font-medium text-gray-700 dark:text-gray-300">
                                                                 Cooldown
                                                                 <svg
                                                                     className="h-3 w-3 text-gray-400"
@@ -621,8 +666,9 @@ export default function Watchlist({ wallets, networks }: Props) {
                                                     </div>
                                                 )}
                                                 <div>
-                                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                                                        Notes
+                                                    <label
+                                                        className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                    Notes
                                                     </label>
                                                     <textarea
                                                         value={addForm.data.notes}
@@ -674,7 +720,7 @@ export default function Watchlist({ wallets, networks }: Props) {
                     {editingWallet && (
                         <div className="mb-6 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
                             <div className="p-4">
-                                <h3 className="mb-3 text-sm font-medium text-gray-900 dark:text-white">
+                                <h3 className="mb-3 text-md font-medium text-gray-900 dark:text-white">
                                     Edit: {truncateAddress(editingWallet.address)}
                                 </h3>
                                 <form onSubmit={handleEdit} className="space-y-3">
@@ -692,7 +738,7 @@ export default function Watchlist({ wallets, networks }: Props) {
                                                 className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                             />
                                         </div>
-                                        <div className="flex items-center gap-1.5 pb-2">
+                                        <div className="flex items-center gap-1.5 pb-1">
                                             <input
                                                 type="checkbox"
                                                 id="is_notified"
@@ -707,9 +753,10 @@ export default function Watchlist({ wallets, networks }: Props) {
                                             />
                                             <label
                                                 htmlFor="is_notified"
-                                                className="text-xs text-gray-700 dark:text-gray-300"
+                                                className="flex flex-col text-xs text-gray-700 dark:text-gray-300"
                                             >
-                                                Notifications
+                                                <span>Notify about</span>
+                                                <span>transactions</span>
                                             </label>
                                         </div>
                                         {editForm.data.is_notified && (
@@ -760,7 +807,10 @@ export default function Watchlist({ wallets, networks }: Props) {
                                     {showEditAdvanced && (
                                         <div className="space-y-3">
                                             {editForm.data.is_notified && (
-                                                <div className="flex flex-wrap items-end gap-3">
+                                                <div className="flex flex-wrap items-end gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
+                                                    <div className="w-full">
+                                                        <h6 className="text-sm">Notification settings</h6>
+                                                    </div>
                                                     <div className="w-full sm:w-36">
                                                         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
                                                             Threshold (USD)
@@ -890,14 +940,20 @@ export default function Watchlist({ wallets, networks }: Props) {
                         </div>
                     ) : (
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            {wallets.map((wallet) => (
-                                <WalletCard
-                                    key={wallet.id}
-                                    wallet={wallet}
-                                    onEdit={startEdit}
-                                    onRemove={handleRemove}
-                                />
-                            ))}
+                            {wallets
+                                .filter(
+                                    (w) =>
+                                        !networkFilter ||
+                                        w.network.id.toString() === networkFilter,
+                                )
+                                .map((wallet) => (
+                                    <WalletCard
+                                        key={wallet.id}
+                                        wallet={wallet}
+                                        onEdit={startEdit}
+                                        onRemove={handleRemove}
+                                    />
+                                ))}
                         </div>
                     )}
                 </div>

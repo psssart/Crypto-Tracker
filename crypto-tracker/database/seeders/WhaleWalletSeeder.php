@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Jobs\SyncWalletHistory;
 use App\Models\Network;
 use App\Models\Wallet;
 use Illuminate\Database\Seeder;
@@ -61,7 +62,7 @@ class WhaleWalletSeeder extends Seeder
                 continue;
             }
 
-            Wallet::updateOrCreate(
+            $wallet = Wallet::updateOrCreate(
                 ['network_id' => $network->id, 'address' => $whale['address']],
                 [
                     'is_whale' => true,
@@ -69,6 +70,8 @@ class WhaleWalletSeeder extends Seeder
                     'metadata' => ['label' => $whale['label']],
                 ],
             );
+
+            SyncWalletHistory::dispatch($wallet);
         }
     }
 }

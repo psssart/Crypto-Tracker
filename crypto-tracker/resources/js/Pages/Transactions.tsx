@@ -310,37 +310,26 @@ export default function Transactions({
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    Transactions
-                </h2>
+                <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                        Transactions
+                    </h2>
+                    <Link
+                        href={route('watchlist.index')}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Watchlist
+                    </Link>
+                </div>
             }
         >
             <Head title="Transactions" />
 
             <div className="py-6">
                 <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
-                    <div className="mb-4">
-                        <Link
-                            href={route('watchlist.index')}
-                            className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
-                        >
-                            <svg
-                                className="h-4 w-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M15 19l-7-7 7-7"
-                                />
-                            </svg>
-                            Back to Watchlist
-                        </Link>
-                    </div>
-
                     {wallets.length === 0 ? (
                         <div className="py-12 text-center text-gray-500 dark:text-gray-400">
                             <p>No tracked wallets yet.</p>
