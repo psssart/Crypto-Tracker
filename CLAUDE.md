@@ -59,10 +59,24 @@ Laravel handles routing and controllers, rendering React pages via Inertia.js. N
 ### Integration System
 Users manage per-provider API credentials via the Integrations page. Credentials are encrypted in the `user_integrations` table (one row per user+provider). The `IntegrationHealthService` validates credentials, and `ws_source_id` in the config links providers to WebSocket data sources for live charts.
 
+### Watchlist & Whale Tracking
+Users track wallets via the Watchlist page (`/watchlist`). The `user_wallet` pivot table stores per-user settings:
+- `custom_label`, `is_notified`, `notify_threshold_usd` — basic alert config
+- `notify_direction` (`all`/`incoming`/`outgoing`) — filter alerts by tx direction
+- `notify_cooldown_minutes` — minimum minutes between alerts per wallet
+- `last_notified_at` — managed by `ProcessCryptoWebhook` job after sending an alert
+- `notes` — personal notes
+
+The public Whales page (`/whales`) shows whale wallets. Authenticated users see a "Track" button on each card that POSTs to `watchlist.store`, adding the whale to their watchlist. Already-tracked whales show a "Tracking" badge. The controller passes `trackedWhaleIds` (array of wallet IDs the user tracks) to the frontend; empty array for guests.
+
+`ProcessCryptoWebhook` respects direction filter and cooldown before sending `WalletThresholdAlert` notifications, and updates `last_notified_at` on the pivot after each send.
+
 ### Route Structure
 - `/` — Welcome (public)
+- `/whales` — Whale wallet tracking (public, track buttons for auth users)
 - `/dashboard` — DexScreener token feeds (auth + verified)
 - `/chart` — Live WebSocket chart viewer (auth + verified)
+- `/watchlist` — User wallet watchlist with notification settings (auth + verified)
 - `/integrations` — CRUD for user API integrations (auth + verified)
 - `/openai/respond` — OpenAI proxy endpoint (auth + verified)
 - `/profile` — Profile management (auth)

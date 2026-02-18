@@ -23,6 +23,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
+        'telegram_username',
     ];
 
     /**
@@ -66,7 +67,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function wallets()
     {
         return $this->belongsToMany(Wallet::class, 'user_wallet')
-            ->withPivot('custom_label', 'is_notified', 'notify_threshold_usd', 'notify_direction', 'notify_cooldown_minutes', 'last_notified_at', 'notes')
+            ->withPivot('custom_label', 'is_notified', 'notify_threshold_usd', 'notify_via', 'notify_direction', 'notify_cooldown_minutes', 'last_notified_at', 'notes')
             ->withTimestamps();
     }
 }

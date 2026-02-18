@@ -164,6 +164,7 @@ export default function Watchlist({ wallets, networks }: Props) {
         custom_label: string;
         is_notified: boolean;
         notify_threshold_usd: string;
+        notify_via: string;
         notify_direction: string;
         notify_cooldown_minutes: string;
         notes: string;
@@ -171,6 +172,7 @@ export default function Watchlist({ wallets, networks }: Props) {
         custom_label: '',
         is_notified: false,
         notify_threshold_usd: '',
+        notify_via: 'email',
         notify_direction: 'all',
         notify_cooldown_minutes: '',
         notes: '',
@@ -206,6 +208,7 @@ export default function Watchlist({ wallets, networks }: Props) {
             custom_label: wallet.pivot.custom_label || '',
             is_notified: wallet.pivot.is_notified,
             notify_threshold_usd: wallet.pivot.notify_threshold_usd || '',
+            notify_via: wallet.pivot.notify_via || 'email',
             notify_direction: wallet.pivot.notify_direction || 'all',
             notify_cooldown_minutes: wallet.pivot.notify_cooldown_minutes?.toString() || '',
             notes: wallet.pivot.notes || '',
@@ -328,6 +331,24 @@ export default function Watchlist({ wallets, networks }: Props) {
                                                 Notifications
                                             </label>
                                         </div>
+                                        {editForm.data.is_notified && (
+                                            <div className="w-full sm:w-48">
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    Notify via
+                                                </label>
+                                                <select
+                                                    value={editForm.data.notify_via}
+                                                    onChange={(e) =>
+                                                        editForm.setData('notify_via', e.target.value)
+                                                    }
+                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                >
+                                                    <option value="email">Email</option>
+                                                    <option value="telegram">Telegram</option>
+                                                    <option value="both">Both</option>
+                                                </select>
+                                            </div>
+                                        )}
                                         <div className="w-full sm:w-48">
                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                                 Threshold (USD)
@@ -362,8 +383,22 @@ export default function Watchlist({ wallets, networks }: Props) {
                                             </select>
                                         </div>
                                         <div className="w-full sm:w-48">
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                Cooldown (minutes)
+                                            <label className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Cooldown
+                                                <svg
+                                                    className="h-4 w-4 text-gray-400"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <title>Minimum minutes between alerts for this wallet</title>
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={2}
+                                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                    />
+                                                </svg>
                                             </label>
                                             <input
                                                 type="number"

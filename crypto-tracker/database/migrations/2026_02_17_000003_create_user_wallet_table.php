@@ -15,6 +15,11 @@ return new class extends Migration
             $table->string('custom_label')->nullable();
             $table->boolean('is_notified')->default(false);
             $table->decimal('notify_threshold_usd', 36, 18)->nullable();
+            $table->string('notify_via')->default('email');
+            $table->string('notify_direction')->default('all');
+            $table->unsignedInteger('notify_cooldown_minutes')->nullable();
+            $table->timestamp('last_notified_at')->nullable();
+            $table->text('notes')->nullable();
             $table->timestamps();
 
             $table->unique(['user_id', 'wallet_id']);

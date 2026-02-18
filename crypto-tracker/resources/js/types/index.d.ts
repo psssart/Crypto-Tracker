@@ -3,6 +3,7 @@ export interface User {
     name: string;
     email: string;
     email_verified_at?: string;
+    telegram_username?: string;
 }
 
 export interface Network {
@@ -24,6 +25,7 @@ export interface WatchlistWallet {
         custom_label: string | null;
         is_notified: boolean;
         notify_threshold_usd: string | null;
+        notify_via: 'email' | 'telegram' | 'both';
         notify_direction: 'all' | 'incoming' | 'outgoing';
         notify_cooldown_minutes: number | null;
         last_notified_at: string | null;
