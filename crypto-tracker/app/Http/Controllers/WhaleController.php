@@ -12,14 +12,21 @@ class WhaleController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Wallet::where('is_whale', true)->with('network');
+        $excludedNetworks = ['bsc', 'polygon'];
+
+        $query = Wallet::where('is_whale', true)
+            ->with('network')
+            ->whereHas('network', fn ($q) => $q->whereNotIn('slug', $excludedNetworks));
 
         if ($network = $request->query('network')) {
             $query->whereHas('network', fn ($q) => $q->where('slug', $network));
         }
 
         $whales = $query->orderByDesc('balance_usd')->get();
-        $networks = Network::where('is_active', true)->orderBy('name')->get(['id', 'name', 'slug', 'currency_symbol']);
+        $networks = Network::where('is_active', true)
+            ->whereNotIn('slug', $excludedNetworks)
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug', 'currency_symbol']);
 
         $trackedWhaleIds = $request->user()
             ? $request->user()->wallets()->pluck('wallet_id')->toArray()

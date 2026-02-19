@@ -41,7 +41,6 @@ class WhaleWalletSeeder extends Seeder
 
             // ARBITRUM
             ['slug' => 'arbitrum', 'address' => '0x8103683202aa8DA10536036EDef04CDd865C225E', 'label' => 'Arbitrum: L1 Bridge', 'balance' => 3_200_000_000],
-            ['slug' => 'arbitrum', 'address' => '0x908C8656E39f68186161246397ab290103c72c50', 'label' => 'GMX: Reward Router (Whale Hub)', 'balance' => 950_000_000],
             ['slug' => 'arbitrum', 'address' => '0x70997970C51812dc3A010C7d01b50e0d17dc79C8', 'label' => 'Institutional Arbitrum Whale', 'balance' => 420_000_000],
             ['slug' => 'arbitrum', 'address' => '0x3f5CE5FBFe3E9af3971dD833D26bA9b5C936f0bE', 'label' => 'Binance: Arbitrum Hot Wallet', 'balance' => 1_400_000_000],
 
@@ -59,7 +58,6 @@ class WhaleWalletSeeder extends Seeder
 
             // BASE
             ['slug' => 'base', 'address' => '0x49048044D57e1C92A77f79988d21Fa8fAF74E97e', 'label' => 'Base: L1 Bridge Proxy', 'balance' => 2_100_000_000],
-            ['slug' => 'base', 'address' => '0x3301f97203f56A633F8586866b88937019747209', 'label' => 'Aerodrome: Native Whale Hub', 'balance' => 380_000_000],
         ];
 
         foreach ($whales as $whale) {
