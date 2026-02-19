@@ -37,10 +37,17 @@ return [
 
     'moralis' => [
         'api_key' => env('MORALIS_API_KEY'),
+        'stream_id' => env('MORALIS_STREAM_ID'),
     ],
 
     'alchemy' => [
         'key' => env('ALCHEMY_API_KEY'),
+        'auth_token' => env('ALCHEMY_AUTH_TOKEN'),
+        'ethereum' => env('ALCHEMY_WEBHOOK_ID_ETH'),
+        'arbitrum' => env('ALCHEMY_WEBHOOK_ID_ARB'),
+        'solana'   => env('ALCHEMY_WEBHOOK_ID_SOL'),
+        'polygon'   => env('ALCHEMY_WEBHOOK_ID_POL'),
+        'base'   => env('ALCHEMY_WEBHOOK_ID_BAS'),
     ],
 
     'coingecko' => [

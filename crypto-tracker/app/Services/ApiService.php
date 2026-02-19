@@ -93,6 +93,60 @@ class ApiService
     }
 
     /**
+     * Send a PATCH request with JSON body.
+     *
+     * @param string $url     The full URL to call.
+     * @param array  $data    The request payload.
+     * @param array  $headers Optional headers.
+     *
+     * @throws ApiResponseException
+     */
+    public function patch(string $url, array $data = [], array $headers = []): Response
+    {
+        try {
+            $response = Http::withHeaders($headers)
+                ->timeout(60)
+                ->patch($url, $data);
+        } catch (\Throwable $e) {
+            Log::error('API PATCH request failed', [
+                'url'       => $url,
+                'data'      => $data,
+                'exception' => $e->getMessage(),
+            ]);
+            throw new ApiResponseException('Network error during PATCH request', 0, $e);
+        }
+
+        return $this->handleResponse($response, 'PATCH', $url, $data);
+    }
+
+    /**
+     * Send a DELETE request with optional JSON body.
+     *
+     * @param string $url     The full URL to call.
+     * @param array  $data    Optional request payload.
+     * @param array  $headers Optional headers.
+     *
+     * @throws ApiResponseException
+     */
+    public function delete(string $url, array $data = [], array $headers = []): Response
+    {
+        try {
+            $response = Http::withHeaders($headers)
+                ->timeout(60)
+                ->delete($url, $data);
+        } catch (\Throwable $e) {
+            Log::error('API DELETE request failed', [
+                'url'       => $url,
+                'data'      => $data,
+                'exception' => $e->getMessage(),
+            ]);
+            throw new ApiResponseException('Network error during DELETE request', 0, $e);
+        }
+
+        return $this->handleResponse($response, 'DELETE', $url, $data);
+    }
+
+    /**
      * Check for HTTP errors and throw if needed.
      */
     protected function handleResponse(Response $response, string $method, string $url, array $payload): Response

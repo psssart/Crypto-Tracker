@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\SyncWalletHistory;
+use App\Jobs\UpdateWebhookAddress;
 use App\Models\Network;
 use App\Models\Wallet;
 use Illuminate\Http\Request;
@@ -73,6 +74,10 @@ class WatchlistController extends Controller
 
         $user->wallets()->attach($wallet->id, $pivotData);
 
+        if ($wallet->users()->count() === 1) {
+            UpdateWebhookAddress::dispatch($wallet, 'add');
+        }
+
         SyncWalletHistory::dispatch($wallet, $user->id);
 
         return back();
@@ -110,6 +115,10 @@ class WatchlistController extends Controller
         }
 
         $user->wallets()->detach($wallet->id);
+
+        if ($wallet->users()->count() === 0) {
+            UpdateWebhookAddress::dispatch($wallet, 'remove');
+        }
 
         return back();
     }

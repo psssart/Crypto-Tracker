@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\SyncWalletHistory;
+use App\Jobs\UpdateWebhookAddress;
 use App\Models\Network;
 use App\Models\User;
 use App\Models\Wallet;
@@ -328,4 +329,69 @@ test('update rejects notes exceeding max length', function () {
             'notes' => str_repeat('a', 5001),
         ])
         ->assertSessionHasErrors('notes');
+});
+
+// ── Webhook address management ──────────────────────────────────────
+
+test('store dispatches webhook add job when first user tracks wallet', function () {
+    Queue::fake();
+    $user = User::factory()->create();
+    $network = Network::factory()->ethereum()->create();
+
+    $this->actingAs($user)
+        ->post(route('watchlist.store'), [
+            'network_id' => $network->id,
+            'address' => '0xfirst',
+        ]);
+
+    Queue::assertPushed(UpdateWebhookAddress::class, function ($job) {
+        return $job->action === 'add' && $job->wallet->address === '0xfirst';
+    });
+});
+
+test('store does not dispatch webhook add job when wallet already tracked by others', function () {
+    Queue::fake();
+    $user = User::factory()->create();
+    $other = User::factory()->create();
+    $network = Network::factory()->ethereum()->create();
+    $wallet = Wallet::factory()->for($network)->create(['address' => '0xshared']);
+    $other->wallets()->attach($wallet->id);
+
+    $this->actingAs($user)
+        ->post(route('watchlist.store'), [
+            'network_id' => $network->id,
+            'address' => '0xshared',
+        ]);
+
+    Queue::assertNotPushed(UpdateWebhookAddress::class);
+});
+
+test('destroy dispatches webhook remove job when last user untracks wallet', function () {
+    Queue::fake();
+    $user = User::factory()->create();
+    $network = Network::factory()->ethereum()->create();
+    $wallet = Wallet::factory()->for($network)->create();
+    $user->wallets()->attach($wallet->id);
+
+    $this->actingAs($user)
+        ->delete(route('watchlist.destroy', $wallet));
+
+    Queue::assertPushed(UpdateWebhookAddress::class, function ($job) use ($wallet) {
+        return $job->action === 'remove' && $job->wallet->id === $wallet->id;
+    });
+});
+
+test('destroy does not dispatch webhook remove job when other users still track wallet', function () {
+    Queue::fake();
+    $user = User::factory()->create();
+    $other = User::factory()->create();
+    $network = Network::factory()->ethereum()->create();
+    $wallet = Wallet::factory()->for($network)->create();
+    $user->wallets()->attach($wallet->id);
+    $other->wallets()->attach($wallet->id);
+
+    $this->actingAs($user)
+        ->delete(route('watchlist.destroy', $wallet));
+
+    Queue::assertNotPushed(UpdateWebhookAddress::class);
 });

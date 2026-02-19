@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Jobs\UpdateWebhookAddress;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -50,6 +51,15 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
+
+        $orphanedWallets = $user->wallets()
+            ->withCount('users')
+            ->get()
+            ->filter(fn ($wallet) => $wallet->users_count === 1);
+
+        foreach ($orphanedWallets as $wallet) {
+            UpdateWebhookAddress::dispatch($wallet, 'remove');
+        }
 
         Auth::logout();
 
