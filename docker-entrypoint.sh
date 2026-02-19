@@ -33,6 +33,20 @@ if [ "$1" = "php-fpm" ]; then
   if [ "$APP_ENV" = "local" ]; then
     echo "››› Running seeders (idempotent)…"
     php artisan db:seed --force
+
+    echo "››› Fetching current Ngrok URL..."
+    NGROK_PUBLIC_URL=$(curl -s http://tunnel:4040/api/tunnels | grep -o 'https://[^"]*ngrok-free.dev' | head -n 1)
+
+    if [ -n "$NGROK_PUBLIC_URL" ]; then
+        echo "››› Registering Webhook with: $NGROK_PUBLIC_URL"
+        php artisan nutgram:hook:set "$NGROK_PUBLIC_URL/api/webhooks/telegram/webhook"
+    else
+        echo "››› [Warning] Could not fetch Ngrok URL. Is the tunnel container running?"
+    fi
+  else
+    echo "››› Registering Telegram Bot Commands & Webhook..."
+    php artisan nutgram:register-commands
+    php artisan nutgram:hook:set "${APP_URL}/api/telegram/webhook"
   fi
 fi
 

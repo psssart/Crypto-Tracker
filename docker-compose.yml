@@ -74,5 +74,18 @@ services:
             - redis
             - db
 
+    tunnel:
+      image: ngrok/ngrok:latest
+      container_name: crypto-tracker-tunnel
+      ports:
+        - "4041:4040"
+      command:
+        - "http"
+        - "nginx:80"
+      environment:
+        - NGROK_AUTHTOKEN=39tPqpRtt9XDCwnxIHUD1GvyDd4_678dRcxrtLyR6KmkmKgsC
+      depends_on:
+        - nginx
+
 volumes:
     pgdata:
