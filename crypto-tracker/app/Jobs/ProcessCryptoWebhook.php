@@ -30,6 +30,9 @@ class ProcessCryptoWebhook implements ShouldQueue
         'bsc' => 'binancecoin',
         'solana' => 'solana',
         'bitcoin' => 'bitcoin',
+        'tron' => 'tron',
+        'arbitrum' => 'ethereum',
+        'base' => 'ethereum',
     ];
 
     public function __construct(

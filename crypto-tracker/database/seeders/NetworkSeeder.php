@@ -45,6 +45,27 @@ class NetworkSeeder extends Seeder
                 'currency_symbol' => 'BTC',
                 'explorer_url' => 'https://blockstream.info',
             ],
+            [
+                'name' => 'Tron',
+                'slug' => 'tron',
+                'chain_id' => null,
+                'currency_symbol' => 'TRX',
+                'explorer_url' => 'https://tronscan.org',
+            ],
+            [
+                'name' => 'Arbitrum',
+                'slug' => 'arbitrum',
+                'chain_id' => 42161,
+                'currency_symbol' => 'ARB',
+                'explorer_url' => 'https://arbiscan.io',
+            ],
+            [
+                'name' => 'BASE',
+                'slug' => 'base',
+                'chain_id' => 8453,
+                'currency_symbol' => 'ETH',
+                'explorer_url' => 'https://basescan.org',
+            ],
         ];
 
         foreach ($networks as $network) {

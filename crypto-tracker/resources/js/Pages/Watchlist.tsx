@@ -24,6 +24,8 @@ function isValidAddress(address: string, networkSlug: string): boolean {
         case 'ethereum':
         case 'polygon':
         case 'bsc':
+        case 'arbitrum':
+        case 'base':
             return /^0x[0-9a-fA-F]{40}$/.test(trimmed);
         case 'solana':
             return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(trimmed);
@@ -31,6 +33,8 @@ function isValidAddress(address: string, networkSlug: string): boolean {
             return /^(1[a-km-zA-HJ-NP-Z1-9]{25,34}|3[a-km-zA-HJ-NP-Z1-9]{25,34}|bc1[a-z0-9]{39,59})$/.test(
                 trimmed,
             );
+        case 'tron':
+            return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(trimmed);
         default:
             return trimmed.length > 0;
     }
@@ -46,7 +50,9 @@ function WalletCard({
     onRemove: (wallet: WatchlistWallet) => void;
 }) {
     const explorerUrl = wallet.network.explorer_url
-        ? `${wallet.network.explorer_url}/address/${wallet.address}`
+        ? wallet.network.slug === 'tron'
+            ? `${wallet.network.explorer_url}/#/address/${wallet.address}`
+            : `${wallet.network.explorer_url}/address/${wallet.address}`
         : null;
 
     return (

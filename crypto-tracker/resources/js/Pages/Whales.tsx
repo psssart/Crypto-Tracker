@@ -35,8 +35,7 @@ function copyToClipboard(text: string, setCopied: (addr: string) => void) {
 
 function explorerAddressUrl(network: Network, address: string): string | null {
     if (!network.explorer_url) return null;
-    if (network.slug === 'bitcoin') return `${network.explorer_url}/address/${address}`;
-    if (network.slug === 'solana') return `${network.explorer_url}/address/${address}`;
+    if (network.slug === 'tron') return `${network.explorer_url}/#/address/${address}`;
     return `${network.explorer_url}/address/${address}`;
 }
 
@@ -46,6 +45,8 @@ const networkColors: Record<string, string> = {
     MATIC: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
     BTC: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
     SOL: 'bg-green-500/20 text-green-300 border-green-500/30',
+    TRX: 'bg-red-500/20 text-red-300 border-red-500/30',
+    ARB: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
 };
 
 function NetworkBadge({ network }: { network: Network }) {

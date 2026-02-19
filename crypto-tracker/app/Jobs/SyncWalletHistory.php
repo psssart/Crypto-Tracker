@@ -29,6 +29,8 @@ class SyncWalletHistory implements ShouldQueue
         'ethereum' => '0x1',
         'polygon' => '0x89',
         'bsc' => '0x38',
+        'arbitrum' => '0xa4b1',
+        'base' => '0x2105',
     ];
 
     public function __construct(
@@ -127,6 +129,8 @@ class SyncWalletHistory implements ShouldQueue
             'ethereum' => 'ethereum',
             'polygon' => 'matic-network',
             'bsc' => 'binancecoin',
+            'arbitrum' => 'ethereum',
+            'base' => 'ethereum',
         ];
 
         $networkSlug = $this->wallet->network->slug;
