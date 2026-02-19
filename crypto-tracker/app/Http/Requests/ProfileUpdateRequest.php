@@ -25,7 +25,6 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
-            'telegram_username' => ['nullable', 'string', 'max:255'],
-        ];
+];
     }
 }

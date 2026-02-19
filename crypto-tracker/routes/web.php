@@ -22,6 +22,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/profile/telegram-link', [ProfileController::class, 'telegramLink'])->name('profile.telegram-link');
+    Route::post('/profile/telegram-unlink', [ProfileController::class, 'telegramUnlink'])->name('profile.telegram-unlink');
 });
 
 Route::get('/dashboard', function () {

@@ -4,6 +4,9 @@ return [
     // The Telegram BOT api token
     'token' => env('TELEGRAM_TOKEN'),
 
+    // Bot username (without @) for deep link generation
+    'bot_username' => env('TELEGRAM_BOT_USERNAME', ''),
+
     // if the webhook mode must validate the incoming IP range is from a telegram server
     'safe_mode' => env('APP_ENV', 'local') === 'production',
 

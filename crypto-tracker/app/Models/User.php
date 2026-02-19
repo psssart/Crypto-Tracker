@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use App\Notifications\CustomResetPassword;
+use App\Notifications\VerifyEmailCustom;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use App\Notifications\VerifyEmailCustom;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -23,7 +24,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
-        'telegram_username',
     ];
 
     /**
@@ -69,5 +69,15 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsToMany(Wallet::class, 'user_wallet')
             ->withPivot('custom_label', 'is_notified', 'notify_threshold_usd', 'notify_via', 'notify_direction', 'notify_cooldown_minutes', 'last_notified_at', 'notes')
             ->withTimestamps();
+    }
+
+    public function telegramChat(): HasOne
+    {
+        return $this->hasOne(TelegramChat::class);
+    }
+
+    public function routeNotificationForTelegram(): ?string
+    {
+        return $this->telegramChat?->chat_id;
     }
 }

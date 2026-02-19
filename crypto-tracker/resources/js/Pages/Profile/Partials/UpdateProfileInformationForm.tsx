@@ -21,7 +21,6 @@ export default function UpdateProfileInformation({
         useForm({
             name: user.name,
             email: user.email,
-            telegram_username: user.telegram_username || '',
         });
 
     const submit: FormEventHandler = (e) => {
@@ -73,21 +72,6 @@ export default function UpdateProfileInformation({
                     />
 
                     <InputError className="mt-2" message={errors.email} />
-                </div>
-
-                <div>
-                    <InputLabel htmlFor="telegram_username" value="Telegram Username" />
-
-                    <TextInput
-                        id="telegram_username"
-                        className="mt-1 block w-full"
-                        value={data.telegram_username}
-                        onChange={(e) => setData('telegram_username', e.target.value)}
-                        placeholder="@username"
-                        autoComplete="off"
-                    />
-
-                    <InputError className="mt-2" message={errors.telegram_username} />
                 </div>
 
                 {mustVerifyEmail && user.email_verified_at === null && (

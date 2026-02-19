@@ -50,7 +50,8 @@ php artisan db:seed --class=LocalAdminSeeder  # Seed specific class
 Laravel handles routing and controllers, rendering React pages via Inertia.js. No separate API + SPA — controllers return `Inertia::render()` responses that hydrate React components with server-side props. Ziggy provides Laravel named routes to the frontend.
 
 ### Key Directories
-- `crypto-tracker/app/Services/` — Business logic (ApiService for HTTP calls, IntegrationHealthService for credential validation, OpenAIService for LLM)
+- `crypto-tracker/app/Services/` — Business logic (ApiService for HTTP calls, IntegrationHealthService for credential validation, OpenAIService for LLM, TelegramService for outbound Telegram messages)
+- `crypto-tracker/app/Telegram/Middleware/` — Nutgram global middleware (LogIncomingUpdates)
 - `crypto-tracker/app/Support/IntegrationRegistry.php` — Static accessor for `config/integrations.php` provider definitions
 - `crypto-tracker/config/integrations.php` — Defines all external API providers (AllTick, FreeCryptoAPI, Bybit, OpenAI) with their fields, health checks, and WebSocket source IDs
 - `crypto-tracker/resources/js/Pages/` — React page components (mapped 1:1 to Inertia routes)
@@ -58,6 +59,26 @@ Laravel handles routing and controllers, rendering React pages via Inertia.js. N
 
 ### Integration System
 Users manage per-provider API credentials via the Integrations page. Credentials are encrypted in the `user_integrations` table (one row per user+provider). The `IntegrationHealthService` validates credentials, and `ws_source_id` in the config links providers to WebSocket data sources for live charts.
+
+### Telegram Integration
+Users link their Telegram account via the Profile page ("Connect Telegram" button). The flow:
+1. Backend generates a random token, caches it as `telegram_link:{token}` → `user_id` (15 min TTL)
+2. Frontend opens a `t.me/{bot}?start={token}` deep link
+3. Bot's `/start {token}` handler (in `routes/telegram.php`) looks up the cache, creates/updates a `TelegramChat` record linking the Telegram chat to the user
+4. Bare `/start` (no token) invites unregistered users to sign up on the site
+
+**Tables**: `telegram_chats` (links a Telegram chat_id to a user) and `telegram_messages` (logs all in/out messages). **Models**: `TelegramChat`, `TelegramMessage`.
+
+**Outbound messaging**:
+- `TelegramService` wraps Nutgram's `sendMessage()` with automatic logging to `telegram_messages`
+- `WalletThresholdAlert` notification supports both `mail` and `telegram` channels, controlled by the `notify_via` pivot field (`email`/`telegram`/`both`)
+- A `NotificationSent` event listener in `AppServiceProvider` auto-logs all Telegram notification deliveries
+
+**Inbound logging**: `LogIncomingUpdates` Nutgram global middleware logs every incoming update.
+
+**Webhook**: `POST /api/webhooks/telegram/webhook` (defined in `routes/api.php`) — receives Telegram updates and passes them to Nutgram's `$bot->run()`. Register with `php artisan nutgram:hook:set <url>`.
+
+**Config**: `config/nutgram.php` (token + bot_username), `config/services.php` (`telegram-bot-api` block for laravel-notification-channels).
 
 ### Watchlist & Whale Tracking
 Users track wallets via the Watchlist page (`/watchlist`). The `user_wallet` pivot table stores per-user settings:
@@ -79,7 +100,8 @@ The public Whales page (`/whales`) shows whale wallets. Authenticated users see 
 - `/watchlist` — User wallet watchlist with notification settings (auth + verified)
 - `/integrations` — CRUD for user API integrations (auth + verified)
 - `/openai/respond` — OpenAI proxy endpoint (auth + verified)
-- `/profile` — Profile management (auth)
+- `/profile` — Profile management (auth), includes Telegram link/unlink
+- `/api/webhooks/telegram/webhook` — Telegram bot webhook (Nutgram)
 
 ### Docker Services
 - **app**: PHP-FPM (port 9000), XDebug on 9003
@@ -93,6 +115,7 @@ The public Whales page (`/whales`) shows whale wallets. Authenticated users see 
 - **PHP 8.2+**, Laravel 12, Pest PHP for testing
 - **React 18**, TypeScript, Tailwind CSS, Vite 6
 - **Charts**: `lightweight-charts` library for TradingView-style charts
+- **Telegram**: Nutgram (bot framework) + `laravel-notification-channels/telegram` (notification channel)
 - **UI**: Headless UI + Heroicons
 - **Path alias**: `@/*` maps to `resources/js/*` in TypeScript
 - **Dark mode**: Tailwind `class` strategy

@@ -8,15 +8,29 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('telegram_username')->nullable()->after('email_verified_at');
+        Schema::create('telegram_chats', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('chat_id')->unique();
+            $table->string('telegram_id')->nullable();
+            $table->string('username')->nullable();
+            $table->string('type')->default('private');
+            $table->timestamps();
+        });
+
+        Schema::create('telegram_messages', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('telegram_chat_id')->constrained()->cascadeOnDelete();
+            $table->string('direction');
+            $table->text('text')->nullable();
+            $table->jsonb('raw_payload')->nullable();
+            $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('telegram_username');
-        });
+        Schema::dropIfExists('telegram_messages');
+        Schema::dropIfExists('telegram_chats');
     }
 };

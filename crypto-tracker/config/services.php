@@ -58,4 +58,8 @@ return [
         'key' => env('ETHERSCAN_API_KEY'),
     ],
 
+    'telegram-bot-api' => [
+        'token' => env('TELEGRAM_TOKEN'),
+    ],
+
 ];
