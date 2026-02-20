@@ -6,6 +6,16 @@ use App\Models\User;
 
 class CryptoProviderService
 {
+    private const KEY_CONFIG_MAP = [
+        'moralis' => 'services.moralis.api_key',
+        'alchemy' => 'services.alchemy.key',
+        'coingecko' => 'services.coingecko.key',
+        'etherscan' => 'services.etherscan.key',
+        'trongrid' => 'services.trongrid.key',
+        'helius' => 'services.helius.key',
+        'blockchair' => 'services.blockchair.key',
+    ];
+
     public function resolveApiKey(string $provider, ?User $user = null): ?string
     {
         // Strategy 1: Check user's stored integration key
@@ -21,10 +31,8 @@ class CryptoProviderService
         }
 
         // Strategy 2: Fall back to environment config
-        if ($provider === 'moralis') {
-            return config('services.moralis.api_key');
-        }
+        $configPath = self::KEY_CONFIG_MAP[$provider] ?? "services.{$provider}.key";
 
-        return config("services.{$provider}.key");
+        return config($configPath);
     }
 }

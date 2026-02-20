@@ -58,6 +58,18 @@ return [
         'key' => env('ETHERSCAN_API_KEY'),
     ],
 
+    'trongrid' => [
+        'key' => env('TRONGRID_API_KEY'),
+    ],
+
+    'helius' => [
+        'key' => env('HELIUS_API_KEY'),
+    ],
+
+    'blockchair' => [
+        'key' => env('BLOCKCHAIR_API_KEY'),
+    ],
+
     'telegram-bot-api' => [
         'token' => env('TELEGRAM_TOKEN'),
     ],
