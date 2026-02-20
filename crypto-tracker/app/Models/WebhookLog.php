@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class WebhookLog extends Model
 {
     protected $fillable = [
+        'source',
         'payload',
         'processed_at',
     ];

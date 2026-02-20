@@ -2,12 +2,16 @@
 
 namespace App\Jobs;
 
+use App\Contracts\CryptoWebhookHandler;
+use App\DTOs\ParsedTransaction;
 use App\Models\Network;
 use App\Models\Transaction;
 use App\Models\Wallet;
 use App\Models\WebhookLog;
 use App\Notifications\WalletThresholdAlert;
 use App\Services\CoinGeckoService;
+use App\Services\Webhooks\AlchemyWebhookHandler;
+use App\Services\Webhooks\MoralisWebhookHandler;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
@@ -35,6 +39,11 @@ class ProcessCryptoWebhook implements ShouldQueue
         'base' => 'ethereum',
     ];
 
+    private const HANDLER_MAP = [
+        'moralis' => MoralisWebhookHandler::class,
+        'alchemy' => AlchemyWebhookHandler::class,
+    ];
+
     public function __construct(
         public WebhookLog $webhookLog,
     ) {
@@ -46,71 +55,78 @@ class ProcessCryptoWebhook implements ShouldQueue
             'webhook_log_id' => $this->webhookLog->id,
         ]);
 
-        $payload = $this->webhookLog->payload;
-        $event = $payload['event'] ?? 'unknown';
-        $chainSlug = $payload['chain'] ?? null;
-        $data = $payload['data'] ?? [];
+        $source = $this->webhookLog->source;
+        $handlerClass = self::HANDLER_MAP[$source] ?? null;
 
-        Log::info('ProcessCryptoWebhook: parsed event', [
-            'event' => $event,
-            'chain' => $chainSlug,
-        ]);
-
-        if (!$chainSlug || empty($data)) {
-            Log::warning('ProcessCryptoWebhook: missing chain or data in payload', [
+        if (! $handlerClass) {
+            Log::warning('ProcessCryptoWebhook: unknown source', [
+                'source' => $source,
                 'webhook_log_id' => $this->webhookLog->id,
             ]);
             $this->webhookLog->update(['processed_at' => now()]);
+
             return;
         }
 
-        $network = Network::where('slug', $chainSlug)->first();
-        if (!$network) {
-            Log::warning('ProcessCryptoWebhook: unknown network', ['chain' => $chainSlug]);
+        /** @var CryptoWebhookHandler $handler */
+        $handler = app($handlerClass);
+        $parsedTransactions = $handler->parseTransactions($this->webhookLog->payload);
+
+        if (empty($parsedTransactions)) {
+            Log::info('ProcessCryptoWebhook: no transactions parsed', [
+                'webhook_log_id' => $this->webhookLog->id,
+                'source' => $source,
+            ]);
             $this->webhookLog->update(['processed_at' => now()]);
+
             return;
         }
 
-        $txHash = $data['tx_hash'] ?? $data['hash'] ?? null;
-        $fromAddress = strtolower($data['from_address'] ?? $data['from'] ?? '');
-        $toAddress = strtolower($data['to_address'] ?? $data['to'] ?? '');
-        $value = $data['value'] ?? '0';
-        $blockNumber = $data['block_number'] ?? null;
-        $timestamp = $data['block_timestamp'] ?? $data['timestamp'] ?? null;
+        foreach ($parsedTransactions as $parsed) {
+            $this->processParsedTransaction($parsed, $coinGecko);
+        }
 
-        // Match wallets tracked in our system by from/to address
+        $this->webhookLog->update(['processed_at' => now()]);
+    }
+
+    private function processParsedTransaction(ParsedTransaction $parsed, CoinGeckoService $coinGecko): void
+    {
+        $network = Network::where('slug', $parsed->networkSlug)->first();
+        if (! $network) {
+            Log::warning('ProcessCryptoWebhook: unknown network', ['slug' => $parsed->networkSlug]);
+
+            return;
+        }
+
         $matchedWallets = Wallet::where('network_id', $network->id)
-            ->whereIn('address', array_filter([$fromAddress, $toAddress]))
+            ->whereRaw('LOWER(address) IN (?, ?)', [$parsed->fromAddress, $parsed->toAddress])
             ->get();
 
         if ($matchedWallets->isEmpty()) {
             Log::info('ProcessCryptoWebhook: no tracked wallets matched', [
-                'from' => $fromAddress,
-                'to' => $toAddress,
+                'from' => $parsed->fromAddress,
+                'to' => $parsed->toAddress,
+                'network' => $parsed->networkSlug,
             ]);
-            $this->webhookLog->update(['processed_at' => now()]);
+
             return;
         }
 
-        // Store the transaction for each matched wallet
         foreach ($matchedWallets as $wallet) {
             $transaction = Transaction::updateOrCreate(
-                ['hash' => $txHash],
+                ['hash' => $parsed->txHash],
                 [
                     'wallet_id' => $wallet->id,
-                    'from_address' => $fromAddress,
-                    'to_address' => $toAddress,
-                    'amount' => $this->weiToEther($value),
-                    'block_number' => $blockNumber,
-                    'mined_at' => $timestamp ? Carbon::parse($timestamp) : null,
+                    'from_address' => $parsed->fromAddress,
+                    'to_address' => $parsed->toAddress,
+                    'amount' => $parsed->amount,
+                    'block_number' => $parsed->blockNumber,
+                    'mined_at' => $parsed->minedAt,
                 ],
             );
 
-            // Notify users whose thresholds are exceeded
             $this->notifyUsers($wallet, $transaction, $coinGecko);
         }
-
-        $this->webhookLog->update(['processed_at' => now()]);
     }
 
     private function notifyUsers(Wallet $wallet, Transaction $transaction, CoinGeckoService $coinGecko): void
@@ -151,10 +167,10 @@ class ProcessCryptoWebhook implements ShouldQueue
 
             // Direction filter
             $direction = $user->pivot->notify_direction ?? 'all';
-            if ($direction === 'incoming' && !$isIncoming) {
+            if ($direction === 'incoming' && ! $isIncoming) {
                 continue;
             }
-            if ($direction === 'outgoing' && !$isOutgoing) {
+            if ($direction === 'outgoing' && ! $isOutgoing) {
                 continue;
             }
 
@@ -186,10 +202,5 @@ class ProcessCryptoWebhook implements ShouldQueue
                 'threshold' => $threshold,
             ]);
         }
-    }
-
-    private function weiToEther(string $wei): string
-    {
-        return bcdiv($wei, '1000000000000000000', 18);
     }
 }

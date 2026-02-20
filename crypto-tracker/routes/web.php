@@ -7,7 +7,6 @@ use App\Http\Controllers\OpenAIController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WatchlistController;
-use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\WhaleController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -15,8 +14,6 @@ use Inertia\Inertia;
 
 Route::get('/', [WhaleController::class, 'index'])->name('whales');
 Route::get('/whales/{wallet}/transactions', [WhaleController::class, 'transactions'])->name('whales.transactions');
-
-Route::post('/webhooks/crypto', [WebhookController::class, 'handle'])->name('webhooks.crypto');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

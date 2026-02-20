@@ -3,47 +3,115 @@
 use App\Jobs\ProcessCryptoWebhook;
 use App\Models\WebhookLog;
 use Illuminate\Support\Facades\Queue;
+use kornrunner\Keccak;
 
-test('webhook endpoint accepts payload and returns 202', function () {
+test('moralis webhook rejects request without signature', function () {
     Queue::fake();
 
-    $this->postJson(route('webhooks.crypto'), [
-        'event' => 'transfer',
-        'chain' => 'ethereum',
-        'data' => ['tx_hash' => '0xabc'],
-    ])->assertStatus(202)
-      ->assertJson(['status' => 'accepted']);
+    $this->postJson(route('webhooks.moralis'), ['confirmed' => true])
+        ->assertStatus(401)
+        ->assertJson(['error' => 'Invalid signature']);
+
+    Queue::assertNothingPushed();
 });
 
-test('webhook endpoint logs payload to database', function () {
+test('moralis webhook accepts payload with valid signature and returns 202', function () {
     Queue::fake();
+    config(['services.moralis.api_key' => 'test-moralis-secret']);
 
-    $payload = ['event' => 'swap', 'chain' => 'polygon'];
+    $payload = ['confirmed' => true, 'chainId' => '0x1', 'txs' => []];
+    $body = json_encode($payload);
+    $signature = Keccak::hash($body . 'test-moralis-secret', 256);
 
-    $this->postJson(route('webhooks.crypto'), $payload);
+    $this->call('POST', route('webhooks.moralis'), [], [], [], [
+        'HTTP_X_SIGNATURE' => $signature,
+        'CONTENT_TYPE' => 'application/json',
+    ], $body)
+        ->assertStatus(202)
+        ->assertJson(['status' => 'accepted']);
+});
+
+test('moralis webhook logs payload with source', function () {
+    Queue::fake();
+    config(['services.moralis.api_key' => 'test-moralis-secret']);
+
+    $payload = ['confirmed' => true, 'chainId' => '0x1', 'txs' => []];
+    $body = json_encode($payload);
+    $signature = Keccak::hash($body . 'test-moralis-secret', 256);
+
+    $this->call('POST', route('webhooks.moralis'), [], [], [], [
+        'HTTP_X_SIGNATURE' => $signature,
+        'CONTENT_TYPE' => 'application/json',
+    ], $body);
 
     $this->assertDatabaseCount('webhook_logs', 1);
 
     $log = WebhookLog::first();
-    expect($log->payload['event'])->toBe('swap');
-    expect($log->payload['chain'])->toBe('polygon');
+    expect($log->source)->toBe('moralis');
+    expect($log->payload['confirmed'])->toBeTrue();
     expect($log->processed_at)->toBeNull();
 });
 
-test('webhook endpoint dispatches ProcessCryptoWebhook job', function () {
+test('moralis webhook dispatches ProcessCryptoWebhook job', function () {
     Queue::fake();
+    config(['services.moralis.api_key' => 'test-moralis-secret']);
 
-    $this->postJson(route('webhooks.crypto'), ['event' => 'mint']);
+    $payload = ['confirmed' => true, 'chainId' => '0x1', 'txs' => []];
+    $body = json_encode($payload);
+    $signature = Keccak::hash($body . 'test-moralis-secret', 256);
+
+    $this->call('POST', route('webhooks.moralis'), [], [], [], [
+        'HTTP_X_SIGNATURE' => $signature,
+        'CONTENT_TYPE' => 'application/json',
+    ], $body);
 
     Queue::assertPushed(ProcessCryptoWebhook::class, function ($job) {
         return $job->webhookLog->id === WebhookLog::first()->id;
     });
 });
 
-test('webhook endpoint is exempt from CSRF verification', function () {
+test('alchemy webhook rejects request without signature', function () {
     Queue::fake();
 
-    // Regular POST (not JSON) should also work without CSRF token
-    $this->post(route('webhooks.crypto'), ['event' => 'test'])
-        ->assertStatus(202);
+    $this->postJson(route('webhooks.alchemy'), ['event' => []])
+        ->assertStatus(401)
+        ->assertJson(['error' => 'Invalid signature']);
+
+    Queue::assertNothingPushed();
+});
+
+test('alchemy webhook accepts payload with valid signature and returns 202', function () {
+    Queue::fake();
+    config(['services.alchemy.auth_token' => 'test-alchemy-secret']);
+
+    $payload = ['event' => ['network' => 'ETH_MAINNET', 'activity' => []]];
+    $body = json_encode($payload);
+    $signature = hash_hmac('sha256', $body, 'test-alchemy-secret');
+
+    $this->call('POST', route('webhooks.alchemy'), [], [], [], [
+        'HTTP_X_ALCHEMY_SIGNATURE' => $signature,
+        'CONTENT_TYPE' => 'application/json',
+    ], $body)
+        ->assertStatus(202)
+        ->assertJson(['status' => 'accepted']);
+});
+
+test('alchemy webhook logs payload with source', function () {
+    Queue::fake();
+    config(['services.alchemy.auth_token' => 'test-alchemy-secret']);
+
+    $payload = ['event' => ['network' => 'ETH_MAINNET', 'activity' => []]];
+    $body = json_encode($payload);
+    $signature = hash_hmac('sha256', $body, 'test-alchemy-secret');
+
+    $this->call('POST', route('webhooks.alchemy'), [], [], [], [
+        'HTTP_X_ALCHEMY_SIGNATURE' => $signature,
+        'CONTENT_TYPE' => 'application/json',
+    ], $body);
+
+    $this->assertDatabaseCount('webhook_logs', 1);
+
+    $log = WebhookLog::first();
+    expect($log->source)->toBe('alchemy');
+    expect($log->processed_at)->toBeNull();
 });
