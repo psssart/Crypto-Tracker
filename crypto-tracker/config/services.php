@@ -38,16 +38,34 @@ return [
     'moralis' => [
         'api_key' => env('MORALIS_API_KEY'),
         'stream_id' => env('MORALIS_STREAM_ID'),
+        'secret_key' => env('MORALIS_SECRET_KEY'),
     ],
 
     'alchemy' => [
         'key' => env('ALCHEMY_API_KEY'),
         'auth_token' => env('ALCHEMY_AUTH_TOKEN'),
-        'ethereum' => env('ALCHEMY_WEBHOOK_ID_ETH'),
-        'arbitrum' => env('ALCHEMY_WEBHOOK_ID_ARB'),
-        'solana'   => env('ALCHEMY_WEBHOOK_ID_SOL'),
-        'polygon'   => env('ALCHEMY_WEBHOOK_ID_POL'),
-        'base'   => env('ALCHEMY_WEBHOOK_ID_BAS'),
+        'webhooks' => [
+            'ethereum' => [
+                'id'          => env('ALCHEMY_WEBHOOK_ID_ETH'),
+                'signing_key' => env('ALCHEMY_WEBHOOK_ETH_SIGNING_KEY'),
+            ],
+            'arbitrum' => [
+                'id'          => env('ALCHEMY_WEBHOOK_ID_ARB'),
+                'signing_key' => env('ALCHEMY_WEBHOOK_ARB_SIGNING_KEY'),
+            ],
+            'solana' => [
+                'id'          => env('ALCHEMY_WEBHOOK_ID_SOL'),
+                'signing_key' => env('ALCHEMY_WEBHOOK_SOL_SIGNING_KEY'),
+            ],
+            'polygon' => [
+                'id'          => env('ALCHEMY_WEBHOOK_ID_POL'),
+                'signing_key' => env('ALCHEMY_WEBHOOK_POL_SIGNING_KEY'),
+            ],
+            'base' => [
+                'id'          => env('ALCHEMY_WEBHOOK_ID_BAS'),
+                'signing_key' => env('ALCHEMY_WEBHOOK_BAS_SIGNING_KEY'),
+            ],
+        ],
     ],
 
     'coingecko' => [

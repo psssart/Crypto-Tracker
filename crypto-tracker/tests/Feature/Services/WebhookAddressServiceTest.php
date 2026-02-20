@@ -18,7 +18,7 @@ beforeEach(function () {
 test('addAddress calls Alchemy for ethereum network', function () {
     config([
         'services.alchemy.auth_token' => 'test-token',
-        'services.alchemy.ethereum' => 'wh_ethereum',
+        'services.alchemy.webhooks.ethereum.id' => 'wh_ethereum',
     ]);
 
     $network = Network::factory()->ethereum()->create();
@@ -39,7 +39,7 @@ test('addAddress calls Alchemy for ethereum network', function () {
 test('removeAddress calls Alchemy for polygon network', function () {
     config([
         'services.alchemy.auth_token' => 'test-token',
-        'services.alchemy.polygon' => 'wh_polygon',
+        'services.alchemy.webhooks.polygon.id' => 'wh_polygon',
     ]);
 
     $network = Network::factory()->polygon()->create();
@@ -113,7 +113,7 @@ test('addAddress logs warning for non-EVM network', function () {
 test('addAddress skips when Alchemy config is missing', function () {
     config([
         'services.alchemy.auth_token' => null,
-        'services.alchemy.ethereum' => null,
+        'services.alchemy.webhooks.ethereum.id' => null,
     ]);
 
     Log::shouldReceive('warning')

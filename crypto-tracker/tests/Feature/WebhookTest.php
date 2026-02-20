@@ -82,7 +82,7 @@ test('alchemy webhook rejects request without signature', function () {
 
 test('alchemy webhook accepts payload with valid signature and returns 202', function () {
     Queue::fake();
-    config(['services.alchemy.auth_token' => 'test-alchemy-secret']);
+    config(['services.alchemy.webhooks.ethereum.signing_key' => 'test-alchemy-secret']);
 
     $payload = ['event' => ['network' => 'ETH_MAINNET', 'activity' => []]];
     $body = json_encode($payload);
@@ -98,7 +98,7 @@ test('alchemy webhook accepts payload with valid signature and returns 202', fun
 
 test('alchemy webhook logs payload with source', function () {
     Queue::fake();
-    config(['services.alchemy.auth_token' => 'test-alchemy-secret']);
+    config(['services.alchemy.webhooks.ethereum.signing_key' => 'test-alchemy-secret']);
 
     $payload = ['event' => ['network' => 'ETH_MAINNET', 'activity' => []]];
     $body = json_encode($payload);

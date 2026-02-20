@@ -54,7 +54,7 @@ class WebhookAddressService
     private function alchemyUpdate(Wallet $wallet, string $action): void
     {
         $authToken = config('services.alchemy.auth_token');
-        $webhookId = config("services.alchemy.{$wallet->network->slug}");
+        $webhookId = config("services.alchemy.webhooks.{$wallet->network->slug}.id");
 
         if (!$authToken || !$webhookId) {
             Log::warning('WebhookAddressService: Alchemy config missing, skipping', [

@@ -25,13 +25,15 @@ class MoralisWebhookHandler implements CryptoWebhookHandler
             return false;
         }
 
-        $secret = config('services.moralis.api_key');
+        $secret = config('services.moralis.secret_key');
         if (! $secret) {
             return false;
         }
 
         $rawBody = $request->getContent();
         $expected = Keccak::hash($rawBody . $secret, 256);
+
+        $signature = str_starts_with($signature, '0x') ? substr($signature, 2) : $signature;
 
         return hash_equals($expected, $signature);
     }

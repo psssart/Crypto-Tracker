@@ -155,13 +155,12 @@ class ProcessCryptoWebhook implements ShouldQueue
 
         $usersToNotify = $wallet->users()
             ->wherePivot('is_notified', true)
-            ->wherePivotNotNull('notify_threshold_usd')
             ->get();
 
         foreach ($usersToNotify as $user) {
-            $threshold = (float) $user->pivot->notify_threshold_usd;
+            $threshold = (float) ($user->pivot->notify_threshold_usd ?? 0);
 
-            if ($amountUsd < $threshold) {
+            if ($threshold > 0 && $amountUsd < $threshold) {
                 continue;
             }
 

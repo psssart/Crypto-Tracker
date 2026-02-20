@@ -23,12 +23,19 @@ class AlchemyWebhookHandler implements CryptoWebhookHandler
             return false;
         }
 
-        $signingKey = config('services.alchemy.auth_token');
+        $rawBody = $request->getContent();
+        $network = json_decode($rawBody, true)['event']['network'] ?? null;
+        $slug = self::NETWORK_MAP[$network] ?? null;
+
+        if (! $slug) {
+            return false;
+        }
+
+        $signingKey = config("services.alchemy.webhooks.{$slug}.signing_key");
         if (! $signingKey) {
             return false;
         }
 
-        $rawBody = $request->getContent();
         $expected = hash_hmac('sha256', $rawBody, $signingKey);
 
         return hash_equals($expected, $signature);
