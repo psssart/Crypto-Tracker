@@ -51,6 +51,9 @@ Laravel handles routing and controllers, rendering React pages via Inertia.js. N
 
 ### Key Directories
 - `crypto-tracker/app/Services/` — Business logic (ApiService for HTTP calls, IntegrationHealthService for credential validation, OpenAIService for LLM, TelegramService for outbound Telegram messages)
+- `crypto-tracker/app/Services/Webhooks/` — Provider-specific webhook handlers (`MoralisWebhookHandler`, `AlchemyWebhookHandler`) implementing `CryptoWebhookHandler` interface
+- `crypto-tracker/app/Contracts/` — Interfaces (`WalletHistoryProvider`, `CryptoWebhookHandler`)
+- `crypto-tracker/app/DTOs/` — Value objects (`ParsedTransaction`)
 - `crypto-tracker/app/Telegram/Middleware/` — Nutgram global middleware (LogIncomingUpdates)
 - `crypto-tracker/app/Support/IntegrationRegistry.php` — Static accessor for `config/integrations.php` provider definitions
 - `crypto-tracker/config/integrations.php` — Defines all external API providers (AllTick, FreeCryptoAPI, Bybit, OpenAI, CoinGecko, Blockchair, Helius, TronGrid, Etherscan, Alchemy, Moralis) with their fields, health checks, and WebSocket source IDs
@@ -92,6 +95,31 @@ The public Whales page (`/whales`) shows whale wallets. Authenticated users see 
 
 `ProcessCryptoWebhook` respects direction filter and cooldown before sending `WalletThresholdAlert` notifications, and updates `last_notified_at` on the pivot after each send.
 
+### Crypto Webhook System
+Provider-specific webhook endpoints with signature verification, following the same pattern as `WalletHistoryProvider` + registry.
+
+**Architecture:**
+- `CryptoWebhookHandler` interface (`app/Contracts/`) — `verifySignature(Request)` + `parseTransactions(array): ParsedTransaction[]`
+- `MoralisWebhookHandler` — Keccak-256 signature verification (`x-signature` header), parses Moralis Streams payloads (confirmed only), converts wei→ether
+- `AlchemyWebhookHandler` — HMAC-SHA256 signature verification (`x-alchemy-signature` header), parses Alchemy Notify payloads (external transfers only)
+- `ParsedTransaction` DTO (`app/DTOs/`) — value object with `networkSlug`, `txHash`, `fromAddress`, `toAddress`, `amount`, `blockNumber`, `minedAt`
+- `CryptoWebhookController` — two endpoints calling shared `process()` flow: verify signature → log → dispatch job
+- `ProcessCryptoWebhook` job — resolves handler by `webhook_logs.source`, calls `parseTransactions()`, matches wallets, creates transactions, sends notifications
+
+**Endpoints** (in `routes/api.php`, no auth):
+- `POST /api/webhooks/moralis` — Moralis Streams webhook
+- `POST /api/webhooks/alchemy` — Alchemy Notify webhook
+
+**Signature secrets** (in `config/services.php`):
+- Moralis: `config('services.moralis.api_key')`
+- Alchemy: `config('services.alchemy.auth_token')`
+
+**Network mappings:**
+- Moralis chainId (hex): `0x1→ethereum`, `0x89→polygon`, `0x38→bsc`, `0xa4b1→arbitrum`, `0x2105→base`
+- Alchemy network string: `ETH_MAINNET→ethereum`, `ARB_MAINNET→arbitrum`, `MATIC_MAINNET→polygon`, `BASE_MAINNET→base`, `SOL_MAINNET→solana`
+
+**Tables**: `webhook_logs` (`source`, `payload` jsonb, `processed_at`). **Model**: `WebhookLog`.
+
 ### Route Structure
 - `/` — Welcome (public)
 - `/whales` — Whale wallet tracking (public, track buttons for auth users)
@@ -102,6 +130,8 @@ The public Whales page (`/whales`) shows whale wallets. Authenticated users see 
 - `/openai/respond` — OpenAI proxy endpoint (auth + verified)
 - `/profile` — Profile management (auth), includes Telegram link/unlink
 - `/api/webhooks/telegram/webhook` — Telegram bot webhook (Nutgram)
+- `/api/webhooks/moralis` — Moralis Streams crypto webhook (signature-verified)
+- `/api/webhooks/alchemy` — Alchemy Notify crypto webhook (signature-verified)
 
 ### Docker Services
 - **app**: PHP-FPM (port 9000), XDebug on 9003

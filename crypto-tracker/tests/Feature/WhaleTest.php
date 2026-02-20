@@ -14,10 +14,10 @@ beforeEach(function () {
     ]);
 
     $this->bscNetwork = Network::factory()->create([
-        'name' => 'BNB Smart Chain',
-        'slug' => 'bsc',
-        'currency_symbol' => 'BNB',
-        'explorer_url' => 'https://bscscan.com',
+        'name' => 'Arbitrum',
+        'slug' => 'arbitrum',
+        'currency_symbol' => 'ETH',
+        'explorer_url' => 'https://arbiscan.io',
         'is_active' => true,
     ]);
 });
