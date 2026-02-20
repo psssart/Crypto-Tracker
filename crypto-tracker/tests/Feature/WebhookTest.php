@@ -17,7 +17,7 @@ test('moralis webhook rejects request without signature', function () {
 
 test('moralis webhook accepts payload with valid signature and returns 202', function () {
     Queue::fake();
-    config(['services.moralis.api_key' => 'test-moralis-secret']);
+    config(['services.moralis.secret_key' => 'test-moralis-secret']);
 
     $payload = ['confirmed' => true, 'chainId' => '0x1', 'txs' => []];
     $body = json_encode($payload);
@@ -33,7 +33,7 @@ test('moralis webhook accepts payload with valid signature and returns 202', fun
 
 test('moralis webhook logs payload with source', function () {
     Queue::fake();
-    config(['services.moralis.api_key' => 'test-moralis-secret']);
+    config(['services.moralis.secret_key' => 'test-moralis-secret']);
 
     $payload = ['confirmed' => true, 'chainId' => '0x1', 'txs' => []];
     $body = json_encode($payload);
@@ -54,7 +54,7 @@ test('moralis webhook logs payload with source', function () {
 
 test('moralis webhook dispatches ProcessCryptoWebhook job', function () {
     Queue::fake();
-    config(['services.moralis.api_key' => 'test-moralis-secret']);
+    config(['services.moralis.secret_key' => 'test-moralis-secret']);
 
     $payload = ['confirmed' => true, 'chainId' => '0x1', 'txs' => []];
     $body = json_encode($payload);
