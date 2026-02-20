@@ -72,7 +72,7 @@ return [
             ],
             'default_settings' => [],
             'health_check' => [
-                'enabled' => false,
+                'enabled' => true,
             ],
         ],
 
@@ -87,7 +87,7 @@ return [
             ],
             'default_settings' => [],
             'health_check' => [
-                'enabled' => false,
+                'enabled' => true,
             ],
         ],
 
@@ -102,7 +102,67 @@ return [
             ],
             'default_settings' => [],
             'health_check' => [
-                'enabled' => false,
+                'enabled' => true,
+            ],
+        ],
+
+        'trongrid' => [
+            'name' => 'TronGrid',
+            'description' => 'TRON blockchain API for account, transaction, and smart contract data.',
+            'docs_url' => 'https://www.trongrid.io/documentation',
+            'secret_field' => [
+                'key' => 'api_key',
+                'label' => 'API key',
+                'help' => 'Create an API key from your TronGrid dashboard.',
+            ],
+            'default_settings' => [],
+            'health_check' => [
+                'enabled' => true,
+            ],
+        ],
+
+        'helius' => [
+            'name' => 'Helius',
+            'description' => 'Solana RPC and API for transactions, tokens, and webhooks.',
+            'docs_url' => 'https://docs.helius.dev/',
+            'secret_field' => [
+                'key' => 'api_key',
+                'label' => 'API key',
+                'help' => 'Get your API key from the Helius developer dashboard.',
+            ],
+            'default_settings' => [],
+            'health_check' => [
+                'enabled' => true,
+            ],
+        ],
+
+        'blockchair' => [
+            'name' => 'Blockchair',
+            'description' => 'Universal blockchain explorer API supporting 40+ blockchains.',
+            'docs_url' => 'https://blockchair.com/api/docs',
+            'secret_field' => [
+                'key' => 'api_key',
+                'label' => 'API key',
+                'help' => 'Get your API key from Blockchair after purchasing a plan.',
+            ],
+            'default_settings' => [],
+            'health_check' => [
+                'enabled' => true,
+            ],
+        ],
+
+        'coingecko' => [
+            'name' => 'CoinGecko',
+            'description' => 'Crypto market data, prices, trading volumes, and exchange info.',
+            'docs_url' => 'https://docs.coingecko.com/v3.0.1/reference/introduction',
+            'secret_field' => [
+                'key' => 'api_key',
+                'label' => 'API key',
+                'help' => 'Get a Demo or Pro API key from your CoinGecko developer dashboard.',
+            ],
+            'default_settings' => [],
+            'health_check' => [
+                'enabled' => true,
             ],
         ],
 

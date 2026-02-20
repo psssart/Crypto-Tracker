@@ -53,7 +53,7 @@ Laravel handles routing and controllers, rendering React pages via Inertia.js. N
 - `crypto-tracker/app/Services/` — Business logic (ApiService for HTTP calls, IntegrationHealthService for credential validation, OpenAIService for LLM, TelegramService for outbound Telegram messages)
 - `crypto-tracker/app/Telegram/Middleware/` — Nutgram global middleware (LogIncomingUpdates)
 - `crypto-tracker/app/Support/IntegrationRegistry.php` — Static accessor for `config/integrations.php` provider definitions
-- `crypto-tracker/config/integrations.php` — Defines all external API providers (AllTick, FreeCryptoAPI, Bybit, OpenAI) with their fields, health checks, and WebSocket source IDs
+- `crypto-tracker/config/integrations.php` — Defines all external API providers (AllTick, FreeCryptoAPI, Bybit, OpenAI, CoinGecko, Blockchair, Helius, TronGrid, Etherscan, Alchemy, Moralis) with their fields, health checks, and WebSocket source IDs
 - `crypto-tracker/resources/js/Pages/` — React page components (mapped 1:1 to Inertia routes)
 - `crypto-tracker/resources/js/Components/` — Reusable React components including `LiveWebSocketChart.tsx` for real-time charting
 
