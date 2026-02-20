@@ -244,7 +244,7 @@ export default function Integrations({ providers, integrations, status }: Props)
                             securely and never shown in full.
                         </p>
 
-                        <div className="grid gap-3 md:grid-cols-2">
+                        <div className="grid gap-3 md:grid-cols-2 items-start">
                             {Object.entries(providers).map(([key, config]) => {
                                 const integration = integrationByProvider[key];
                                 const hasIntegration = !!integration;
