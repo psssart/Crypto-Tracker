@@ -279,7 +279,7 @@ export default function Integrations({ providers, integrations, status }: Props)
                                                     )}
                                                 </div>
                                                 {config.description && (
-                                                    <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
+                                                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                                                         {config.description}
                                                     </p>
                                                 )}
