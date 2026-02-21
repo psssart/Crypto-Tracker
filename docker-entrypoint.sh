@@ -46,7 +46,7 @@ if [ "$1" = "php-fpm" ]; then
   else
     echo "››› Registering Telegram Bot Commands & Webhook..."
     php artisan nutgram:register-commands
-    php artisan nutgram:hook:set "${APP_URL}/api/telegram/webhook"
+    php artisan nutgram:hook:set "${APP_URL}/api/webhooks/telegram/webhook"
   fi
 fi
 

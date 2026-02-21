@@ -76,7 +76,9 @@ class WhaleWalletSeeder extends Seeder
                 ],
             );
 
-            SyncWalletHistory::dispatch($wallet);
+            if ($wallet->wasRecentlyCreated) {
+                SyncWalletHistory::dispatch($wallet);
+            }
         }
     }
 }
