@@ -54,4 +54,15 @@ class NetworkFactory extends Factory
             'explorer_url' => 'https://bscscan.com',
         ]);
     }
+
+    public function solana(): static
+    {
+        return $this->state(fn () => [
+            'name' => 'Solana',
+            'slug' => 'solana',
+            'chain_id' => null,
+            'currency_symbol' => 'SOL',
+            'explorer_url' => 'https://solscan.io',
+        ]);
+    }
 }

@@ -30,10 +30,10 @@ if [ "$1" = "php-fpm" ]; then
   echo "››› Running pending migrations…"
   php artisan migrate --force
 
-  if [ "$APP_ENV" = "local" ]; then
-    echo "››› Running seeders (idempotent)…"
-    php artisan db:seed --force
+  echo "››› Running seeders (idempotent)…"
+  php artisan db:seed --force
 
+  if [ "$APP_ENV" = "local" ]; then
     echo "››› Fetching current Ngrok URL..."
     NGROK_PUBLIC_URL=$(curl -s http://tunnel:4040/api/tunnels | grep -o 'https://[^"]*ngrok-free.dev' | head -n 1)
 

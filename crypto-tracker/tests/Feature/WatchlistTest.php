@@ -140,6 +140,25 @@ test('store reuses existing wallet for same network and address', function () {
     expect($user->wallets->first()->id)->toBe($wallet->id);
 });
 
+test('store preserves original case for solana addresses', function () {
+    Queue::fake();
+    $user = User::factory()->create();
+    $network = Network::factory()->solana()->create();
+    $address = '7s7LpM8967zKzW3M2Y7ZzDsGYdLVL9zYtAWWM';
+
+    $this->actingAs($user)
+        ->post(route('watchlist.store'), [
+            'network_id' => $network->id,
+            'address' => $address,
+        ])
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('wallets', [
+        'network_id' => $network->id,
+        'address' => $address, // NOT lowercased
+    ]);
+});
+
 test('store prevents duplicate wallet attachment', function () {
     Queue::fake();
     $user = User::factory()->create();

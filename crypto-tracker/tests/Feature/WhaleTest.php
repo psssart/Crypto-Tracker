@@ -79,6 +79,18 @@ test('whales page filters by network', function () {
 });
 
 test('whales page returns networks list', function () {
+    Wallet::factory()->create([
+        'network_id' => $this->network->id,
+        'address' => '0xWhale1',
+        'is_whale' => true,
+    ]);
+
+    Wallet::factory()->create([
+        'network_id' => $this->bscNetwork->id,
+        'address' => '0xWhale2',
+        'is_whale' => true,
+    ]);
+
     $this->get(route('whales'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
