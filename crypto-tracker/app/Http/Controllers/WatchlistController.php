@@ -68,10 +68,13 @@ class WatchlistController extends Controller
             return back()->withErrors(['limit' => 'You have reached the free limit of ' . self::FREE_WALLET_LIMIT . ' tracked wallets. Configure your API keys in Integrations to track more.']);
         }
 
+        $isCaseSensitive = in_array($network->slug, WebhookAddressService::NON_EVM_NETWORKS, true)
+            || $network->slug === 'solana';
+
         $wallet = Wallet::firstOrCreate(
             [
                 'network_id' => $validated['network_id'],
-                'address' => strtolower($validated['address']),
+                'address' => $isCaseSensitive ? $validated['address'] : strtolower($validated['address']),
             ],
         );
 
