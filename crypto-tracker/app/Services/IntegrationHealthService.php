@@ -17,7 +17,14 @@ class IntegrationHealthService
                 'alltick'       => $this->checkAllTick($apiKey),
                 'freecryptoapi' => $this->checkFreeCryptoApi($apiKey),
                 'bybit'         => $this->checkBybit($apiKey, $apiSecret),
-                'openai' => $this->checkOpenAI($apiKey),
+                'openai'        => $this->checkOpenAI($apiKey),
+                'moralis'       => $this->checkMoralis($apiKey),
+                'alchemy'       => $this->checkAlchemy($apiKey),
+                'etherscan'     => $this->checkEtherscan($apiKey),
+                'trongrid'      => $this->checkTronGrid($apiKey),
+                'helius'        => $this->checkHelius($apiKey),
+                'blockchair'    => $this->checkBlockchair($apiKey),
+                'coingecko'     => $this->checkCoinGecko($apiKey),
                 default         => [
                     'ok' => false,
                     'message' => 'Health check not implemented for this provider.',
@@ -175,5 +182,175 @@ class IntegrationHealthService
                 'status' => $status,
             ],
         ];
+    }
+
+    private function checkMoralis(string $apiKey): array
+    {
+        $res = Http::timeout(5)
+            ->withHeaders(['X-API-Key' => $apiKey])
+            ->acceptJson()
+            ->get('https://deep-index.moralis.io/api/v2.2/web3/version');
+
+        if ($res->successful()) {
+            return ['ok' => true, 'message' => 'Moralis API key is valid.'];
+        }
+
+        if ($res->status() === 401) {
+            return ['ok' => false, 'message' => 'Moralis rejected the API key (401).'];
+        }
+
+        return ['ok' => false, 'message' => 'Moralis health check failed (HTTP '.$res->status().').'];
+    }
+
+    private function checkAlchemy(string $apiKey): array
+    {
+        $res = Http::timeout(5)
+            ->acceptJson()
+            ->post('https://eth-mainnet.g.alchemy.com/v2/'.$apiKey, [
+                'jsonrpc' => '2.0',
+                'method' => 'web3_clientVersion',
+                'params' => [],
+                'id' => 1,
+            ]);
+
+        if (! $res->successful()) {
+            if ($res->status() === 401 || $res->status() === 403) {
+                return ['ok' => false, 'message' => 'Alchemy rejected the API key.'];
+            }
+
+            return ['ok' => false, 'message' => 'Alchemy health check failed (HTTP '.$res->status().').'];
+        }
+
+        $json = $res->json();
+
+        if (isset($json['error'])) {
+            return ['ok' => false, 'message' => 'Alchemy RPC error: '.($json['error']['message'] ?? 'unknown')];
+        }
+
+        return ['ok' => true, 'message' => 'Alchemy API key is valid.'];
+    }
+
+    private function checkEtherscan(string $apiKey): array
+    {
+        $res = Http::timeout(5)
+            ->acceptJson()
+            ->get('https://api.etherscan.io/api', [
+                'module' => 'stats',
+                'action' => 'ethprice',
+                'apikey' => $apiKey,
+            ]);
+
+        if (! $res->successful()) {
+            return ['ok' => false, 'message' => 'Etherscan health check failed (HTTP '.$res->status().').'];
+        }
+
+        $json = $res->json();
+
+        if (($json['status'] ?? '') !== '1') {
+            $msg = $json['result'] ?? 'Unknown error';
+
+            return ['ok' => false, 'message' => 'Etherscan error: '.$msg];
+        }
+
+        return ['ok' => true, 'message' => 'Etherscan API key is valid.'];
+    }
+
+    private function checkTronGrid(string $apiKey): array
+    {
+        $res = Http::timeout(5)
+            ->withHeaders(['TRON-PRO-API-KEY' => $apiKey])
+            ->acceptJson()
+            ->get('https://api.trongrid.io/v1/blocks/latest');
+
+        if ($res->successful()) {
+            return ['ok' => true, 'message' => 'TronGrid API key is valid.'];
+        }
+
+        if ($res->status() === 401 || $res->status() === 403) {
+            return ['ok' => false, 'message' => 'TronGrid rejected the API key.'];
+        }
+
+        return ['ok' => false, 'message' => 'TronGrid health check failed (HTTP '.$res->status().').'];
+    }
+
+    private function checkHelius(string $apiKey): array
+    {
+        $res = Http::timeout(5)
+            ->acceptJson()
+            ->post('https://mainnet.helius-rpc.com/?api-key='.$apiKey, [
+                'jsonrpc' => '2.0',
+                'id' => 1,
+                'method' => 'getHealth',
+            ]);
+
+        if (! $res->successful()) {
+            if ($res->status() === 401 || $res->status() === 403) {
+                return ['ok' => false, 'message' => 'Helius rejected the API key.'];
+            }
+
+            return ['ok' => false, 'message' => 'Helius health check failed (HTTP '.$res->status().').'];
+        }
+
+        $json = $res->json();
+
+        if (isset($json['error'])) {
+            return ['ok' => false, 'message' => 'Helius RPC error: '.($json['error']['message'] ?? 'unknown')];
+        }
+
+        return ['ok' => true, 'message' => 'Helius API key is valid.'];
+    }
+
+    private function checkBlockchair(string $apiKey): array
+    {
+        $res = Http::timeout(5)
+            ->acceptJson()
+            ->get('https://api.blockchair.com/bitcoin/stats', [
+                'key' => $apiKey,
+            ]);
+
+        if (! $res->successful()) {
+            if ($res->status() === 401 || $res->status() === 403) {
+                return ['ok' => false, 'message' => 'Blockchair rejected the API key.'];
+            }
+
+            return ['ok' => false, 'message' => 'Blockchair health check failed (HTTP '.$res->status().').'];
+        }
+
+        $json = $res->json();
+
+        if (isset($json['context']['error'])) {
+            return ['ok' => false, 'message' => 'Blockchair error: '.$json['context']['error']];
+        }
+
+        return ['ok' => true, 'message' => 'Blockchair API key is valid.'];
+    }
+
+    private function checkCoinGecko(string $apiKey): array
+    {
+        // Try Demo API first (free tier), fall back to Pro API
+        $res = Http::timeout(5)
+            ->withHeaders(['x-cg-demo-api-key' => $apiKey])
+            ->acceptJson()
+            ->get('https://api.coingecko.com/api/v3/ping');
+
+        if ($res->successful()) {
+            return ['ok' => true, 'message' => 'CoinGecko API key is valid (Demo).'];
+        }
+
+        // If Demo fails with auth error, try Pro endpoint
+        if ($res->status() === 401 || $res->status() === 403) {
+            $proRes = Http::timeout(5)
+                ->withHeaders(['x-cg-pro-api-key' => $apiKey])
+                ->acceptJson()
+                ->get('https://pro-api.coingecko.com/api/v3/ping');
+
+            if ($proRes->successful()) {
+                return ['ok' => true, 'message' => 'CoinGecko API key is valid (Pro).'];
+            }
+
+            return ['ok' => false, 'message' => 'CoinGecko rejected the API key on both Demo and Pro endpoints.'];
+        }
+
+        return ['ok' => false, 'message' => 'CoinGecko health check failed (HTTP '.$res->status().').'];
     }
 }

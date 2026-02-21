@@ -1,6 +1,10 @@
 <?php
 
+use App\Jobs\UpdateWebhookAddress;
+use App\Models\Network;
 use App\Models\User;
+use App\Models\Wallet;
+use Illuminate\Support\Facades\Queue;
 
 test('profile page is displayed', function () {
     $user = User::factory()->create();
@@ -82,4 +86,38 @@ test('correct password must be provided to delete account', function () {
         ->assertRedirect('/profile');
 
     $this->assertNotNull($user->fresh());
+});
+
+// ── Webhook cleanup on account deletion ─────────────────────────────
+
+test('account deletion dispatches webhook remove for orphaned wallets', function () {
+    Queue::fake();
+    $user = User::factory()->create();
+    $network = Network::factory()->ethereum()->create();
+    $wallet = Wallet::factory()->for($network)->create();
+    $user->wallets()->attach($wallet->id);
+
+    $this
+        ->actingAs($user)
+        ->delete('/profile', ['password' => 'password']);
+
+    Queue::assertPushed(UpdateWebhookAddress::class, function ($job) use ($wallet) {
+        return $job->action === 'remove' && $job->wallet->id === $wallet->id;
+    });
+});
+
+test('account deletion does not dispatch webhook remove for wallets tracked by others', function () {
+    Queue::fake();
+    $user = User::factory()->create();
+    $other = User::factory()->create();
+    $network = Network::factory()->ethereum()->create();
+    $wallet = Wallet::factory()->for($network)->create();
+    $user->wallets()->attach($wallet->id);
+    $other->wallets()->attach($wallet->id);
+
+    $this
+        ->actingAs($user)
+        ->delete('/profile', ['password' => 'password']);
+
+    Queue::assertNotPushed(UpdateWebhookAddress::class);
 });

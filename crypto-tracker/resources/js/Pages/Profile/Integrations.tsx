@@ -1,7 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import {CheckCircleIcon, XCircleIcon, ArrowPathIcon, KeyIcon, LinkIcon, TrashIcon} from '@heroicons/react/24/outline';
+import {
+    CheckCircleIcon,
+    XCircleIcon,
+    ArrowPathIcon,
+    KeyIcon,
+    LinkIcon,
+    TrashIcon,
+    PlusIcon,
+    MinusIcon,
+} from '@heroicons/react/24/outline';
 
 type ProviderSecretField = {
     key: string;
@@ -48,6 +57,8 @@ export default function Integrations({ providers, integrations, status }: Props)
         return map;
     }, [integrations]);
 
+    const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
     const [apiKeys, setApiKeys] = useState<Record<string, string>>(() => {
         const initial: Record<string, string> = {};
         Object.keys(providers).forEach((key) => {
@@ -71,6 +82,10 @@ export default function Integrations({ providers, integrations, status }: Props)
 
     const csrfToken =
         (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content ?? '';
+
+    const toggleExpanded = (providerKey: string) => {
+        setExpanded((prev) => ({ ...prev, [providerKey]: !prev[providerKey] }));
+    };
 
     const updateApiKey = (providerKey: string, value: string) => {
         setApiKeys((prev) => ({ ...prev, [providerKey]: value }));
@@ -167,7 +182,7 @@ export default function Integrations({ providers, integrations, status }: Props)
             {
                 preserveScroll: true,
                 onFinish: () => setSavingProvider(null),
-            }
+            },
         );
     };
 
@@ -191,21 +206,15 @@ export default function Integrations({ providers, integrations, status }: Props)
         const state = currentStatus(providerKey);
 
         if (state === 'checking') {
-            return (
-                <ArrowPathIcon className="h-5 w-5 animate-spin text-blue-500" />
-            );
+            return <ArrowPathIcon className="h-5 w-5 animate-spin text-blue-500" />;
         }
 
         if (state === 'success') {
-            return (
-                <CheckCircleIcon className="h-5 w-5 text-green-500" />
-            );
+            return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
         }
 
         if (state === 'error') {
-            return (
-                <XCircleIcon className="h-5 w-5 text-red-500" />
-            );
+            return <XCircleIcon className="h-5 w-5 text-red-500" />;
         }
 
         return null;
@@ -231,16 +240,16 @@ export default function Integrations({ providers, integrations, status }: Props)
 
                     <div className="bg-white p-6 shadow sm:rounded-lg dark:bg-gray-800">
                         <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                            Connect your account to available integrations. API keys are
-                            stored securely and never shown in full.
+                            Connect your account to available integrations. API keys are stored
+                            securely and never shown in full.
                         </p>
 
-                        <div className="grid gap-6 md:grid-cols-2">
+                        <div className="grid gap-3 md:grid-cols-2 items-start">
                             {Object.entries(providers).map(([key, config]) => {
                                 const integration = integrationByProvider[key];
                                 const hasIntegration = !!integration;
-                                const healthEnabled =
-                                    config.health_check?.enabled ?? false;
+                                const isExpanded = expanded[key] ?? false;
+                                const healthEnabled = config.health_check?.enabled ?? false;
                                 const state = currentStatus(key);
                                 const error = currentError(key);
                                 const requiresExtraSecret = !!config.extra_secret_field;
@@ -248,166 +257,187 @@ export default function Integrations({ providers, integrations, status }: Props)
                                 return (
                                     <div
                                         key={key}
-                                        className="flex flex-col justify-between rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900"
+                                        className="rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900"
                                     >
-                                        <div className="space-y-3">
-                                            <div className="flex items-center justify-between">
+                                        {/* Compact header — always visible */}
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleExpanded(key)}
+                                            className="flex w-full items-center gap-3 px-4 py-3 text-left"
+                                        >
+                                            <KeyIcon className="h-5 w-5 shrink-0 text-gray-400" />
+
+                                            <div className="min-w-0 flex-1">
                                                 <div className="flex items-center gap-2">
-                                                    <KeyIcon className="h-5 w-5 text-gray-400" />
-                                                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                                                         {config.name}
-                                                    </h3>
+                                                    </span>
+                                                    {hasIntegration && (
+                                                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-800 dark:bg-green-900/40 dark:text-green-200">
+                                                            Connected
+                                                        </span>
+                                                    )}
                                                 </div>
-
-                                                {hasIntegration && (
-                                                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/40 dark:text-green-200">
-                                                        Connected
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {config.description && (
-                                                <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                    {config.description}
-                                                </p>
-                                            )}
-
-                                            <div className="flex flex-wrap items-center gap-3 text-xs">
-                                                {config.docs_url && (
-                                                    <a
-                                                        href={config.docs_url}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="inline-flex items-center gap-1 text-indigo-600 hover:underline dark:text-indigo-400"
-                                                    >
-                                                        <LinkIcon className="h-4 w-4" />
-                                                        Docs
-                                                    </a>
-                                                )}
-
-                                                {integration?.masked_key && (
-                                                    <span className="text-gray-500 dark:text-gray-400">
-                                                        Current key: {integration.masked_key}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                                                    {config.secret_field.label}
-                                                </label>
-                                                <input
-                                                    type="password"
-                                                    value={apiKeys[key] ?? ''}
-                                                    onChange={(e) =>
-                                                        updateApiKey(key, e.target.value)
-                                                    }
-                                                    placeholder={
-                                                        hasIntegration
-                                                            ? 'Enter new key to replace existing'
-                                                            : 'Enter API key'
-                                                    }
-                                                    className="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
-                                                />
-                                                {config.secret_field.help && (
-                                                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                                                        {config.secret_field.help}
+                                                {config.description && (
+                                                    <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
+                                                        {config.description}
                                                     </p>
                                                 )}
                                             </div>
 
-                                            {config.extra_secret_field && (
-                                                <div className="space-y-2 mt-3">
-                                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                                                        {config.extra_secret_field.label}
-                                                    </label>
-                                                    <input
-                                                        type="password"
-                                                        value={extraSecrets[key] ?? ''}
-                                                        onChange={(e) => updateExtraSecret(key, e.target.value)}
-                                                        placeholder="Enter secret key"
-                                                        className="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
-                                                    />
-                                                    {config.extra_secret_field.help && (
-                                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                                                            {config.extra_secret_field.help}
+                                            {isExpanded ? (
+                                                <MinusIcon className="h-5 w-5 shrink-0 text-gray-400" />
+                                            ) : (
+                                                <PlusIcon className="h-5 w-5 shrink-0 text-gray-400" />
+                                            )}
+                                        </button>
+
+                                        {/* Expandable details */}
+                                        {isExpanded && (
+                                            <div className="border-t border-gray-200 px-4 pb-4 pt-3 dark:border-gray-700">
+                                                <div className="space-y-3">
+                                                    <div className="flex flex-wrap items-center gap-3 text-xs">
+                                                        {config.docs_url && (
+                                                            <a
+                                                                href={config.docs_url}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="inline-flex items-center gap-1 text-indigo-600 hover:underline dark:text-indigo-400"
+                                                            >
+                                                                <LinkIcon className="h-4 w-4" />
+                                                                Docs
+                                                            </a>
+                                                        )}
+
+                                                        {integration?.masked_key && (
+                                                            <span className="text-gray-500 dark:text-gray-400">
+                                                                Current key:{' '}
+                                                                {integration.masked_key}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                            {config.secret_field.label}
+                                                        </label>
+                                                        <input
+                                                            type="password"
+                                                            value={apiKeys[key] ?? ''}
+                                                            onChange={(e) =>
+                                                                updateApiKey(key, e.target.value)
+                                                            }
+                                                            placeholder={
+                                                                hasIntegration
+                                                                    ? 'Enter new key to replace existing'
+                                                                    : 'Enter API key'
+                                                            }
+                                                            className="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                                                        />
+                                                        {config.secret_field.help && (
+                                                            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                                                {config.secret_field.help}
+                                                            </p>
+                                                        )}
+                                                    </div>
+
+                                                    {config.extra_secret_field && (
+                                                        <div className="mt-3 space-y-2">
+                                                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                                {config.extra_secret_field.label}
+                                                            </label>
+                                                            <input
+                                                                type="password"
+                                                                value={extraSecrets[key] ?? ''}
+                                                                onChange={(e) =>
+                                                                    updateExtraSecret(
+                                                                        key,
+                                                                        e.target.value,
+                                                                    )
+                                                                }
+                                                                placeholder="Enter secret key"
+                                                                className="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                                                            />
+                                                            {config.extra_secret_field.help && (
+                                                                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                                                    {config.extra_secret_field.help}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    {error && (
+                                                        <p className="text-xs text-red-500">
+                                                            {error}
                                                         </p>
                                                     )}
                                                 </div>
-                                            )}
 
-                                            {error && (
-                                                <p className="text-xs text-red-500">
-                                                    {error}
-                                                </p>
-                                            )}
-                                        </div>
+                                                <div className="mt-4 flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        {healthEnabled && (
+                                                            <>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        handleTestConnection(key)
+                                                                    }
+                                                                    disabled={
+                                                                        !apiKeys[key] ||
+                                                                        (requiresExtraSecret &&
+                                                                            !extraSecrets[key]) ||
+                                                                        state === 'checking'
+                                                                    }
+                                                                    className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+                                                                >
+                                                                    {state === 'checking'
+                                                                        ? 'Testing...'
+                                                                        : 'Test connection'}
+                                                                </button>
+                                                                {renderStatusIcon(key)}
+                                                            </>
+                                                        )}
+                                                    </div>
 
-                                        <div className="mt-4 flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                {healthEnabled && (
-                                                    <>
+                                                    <div className="flex items-center gap-2">
+                                                        {hasIntegration && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleDelete(key)}
+                                                                disabled={
+                                                                    deletingProvider === key
+                                                                }
+                                                                className="inline-flex items-center gap-1 rounded-md border border-transparent px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/40"
+                                                            >
+                                                                <TrashIcon className="h-4 w-4" />
+                                                                {deletingProvider === key
+                                                                    ? 'Removing...'
+                                                                    : 'Remove'}
+                                                            </button>
+                                                        )}
+
                                                         <button
                                                             type="button"
-                                                            onClick={() =>
-                                                                handleTestConnection(key)
-                                                            }
+                                                            onClick={() => handleSave(key)}
                                                             disabled={
                                                                 !apiKeys[key] ||
-                                                                (requiresExtraSecret && !extraSecrets[key]) ||
-                                                                state === 'checking'
+                                                                (requiresExtraSecret &&
+                                                                    !extraSecrets[key]) ||
+                                                                state !== 'success' ||
+                                                                savingProvider === key
                                                             }
-                                                            className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-60 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+                                                            className="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-60 dark:bg-indigo-500 dark:hover:bg-indigo-600"
                                                         >
-                                                            {state === 'checking' ? (
-                                                                'Testing...'
-                                                            ) : (
-                                                                'Test connection'
-                                                            )}
+                                                            {savingProvider === key
+                                                                ? 'Saving...'
+                                                                : hasIntegration
+                                                                  ? 'Update'
+                                                                  : 'Connect'}
                                                         </button>
-                                                        {renderStatusIcon(key)}
-                                                    </>
-                                                )}
+                                                    </div>
+                                                </div>
                                             </div>
-
-                                            <div className="flex items-center gap-2">
-                                                {hasIntegration && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            handleDelete(key)
-                                                        }
-                                                        disabled={
-                                                            deletingProvider === key
-                                                        }
-                                                        className="inline-flex items-center gap-1 rounded-md border border-transparent px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/40"
-                                                    >
-                                                        <TrashIcon className="h-4 w-4" />
-                                                        {deletingProvider === key
-                                                            ? 'Removing...'
-                                                            : 'Remove'}
-                                                    </button>
-                                                )}
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleSave(key)}
-                                                    disabled={
-                                                        !apiKeys[key] ||
-                                                        (requiresExtraSecret && !extraSecrets[key]) ||
-                                                        state !== 'success' ||
-                                                        savingProvider === key
-                                                    }
-                                                    className="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-60 dark:bg-indigo-500 dark:hover:bg-indigo-600"
-                                                >
-                                                    {savingProvider === key
-                                                        ? 'Saving...'
-                                                        : hasIntegration
-                                                            ? 'Update'
-                                                            : 'Connect'}
-                                                </button>
-                                            </div>
-                                        </div>
+                                        )}
                                     </div>
                                 );
                             })}

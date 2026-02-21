@@ -27,14 +27,26 @@ if [ "$1" = "php-fpm" ]; then
     echo "  still waiting…"
   done
 
-  # Local-only fresh migrate + seed (your existing behavior)
+  echo "››› Running pending migrations…"
+  php artisan migrate --force
+
+  echo "››› Running seeders (idempotent)…"
+  php artisan db:seed --force
+
   if [ "$APP_ENV" = "local" ]; then
-    MARKER=/var/www/storage/.initialized
-    if [ ! -f "$MARKER" ]; then
-      echo "››› Running migrate:fresh --seed (local only)…"
-      php artisan migrate:fresh --seed --force
-      touch "$MARKER"
+    echo "››› Fetching current Ngrok URL..."
+    NGROK_PUBLIC_URL=$(curl -s http://tunnel:4040/api/tunnels | grep -o 'https://[^"]*ngrok-free.dev' | head -n 1)
+
+    if [ -n "$NGROK_PUBLIC_URL" ]; then
+        echo "››› Registering Webhook with: $NGROK_PUBLIC_URL"
+        php artisan nutgram:hook:set "$NGROK_PUBLIC_URL/api/webhooks/telegram/webhook"
+    else
+        echo "››› [Warning] Could not fetch Ngrok URL. Is the tunnel container running?"
     fi
+  else
+    echo "››› Registering Telegram Bot Commands & Webhook..."
+    php artisan nutgram:register-commands
+    php artisan nutgram:hook:set "${APP_URL}/api/webhooks/telegram/webhook"
   fi
 fi
 

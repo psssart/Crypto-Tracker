@@ -6,24 +6,8 @@ use App\Services\IntegrationHealthService;
 
 // ── Show ─────────────────────────────────────────────────────────────
 
-test('chart page requires authentication', function () {
+test('chart page is publicly accessible', function () {
     $this->get(route('chart'))
-        ->assertRedirect(route('login'));
-});
-
-test('chart page requires verified email', function () {
-    $user = User::factory()->unverified()->create();
-
-    $this->actingAs($user)
-        ->get(route('chart'))
-        ->assertRedirect(route('verification.notice'));
-});
-
-test('chart page renders for verified user', function () {
-    $user = User::factory()->create();
-
-    $this->actingAs($user)
-        ->get(route('chart'))
         ->assertOk();
 });
 

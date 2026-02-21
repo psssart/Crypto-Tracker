@@ -14,6 +14,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call(NetworkSeeder::class);
+        $this->call(WhaleWalletSeeder::class);
+
         if (app()->environment('local')) {
             $this->call(AdminUserSeeder::class);
         }

@@ -23,6 +23,7 @@ RUN apk update \
 
 # 2) Install & enable PHP extensions
 RUN docker-php-ext-install \
+      bcmath \
       pdo \
       pdo_pgsql \
       mbstring \

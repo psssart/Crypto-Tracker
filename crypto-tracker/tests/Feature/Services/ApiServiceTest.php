@@ -119,6 +119,62 @@ test('multipart throws ApiResponseException on network error', function () {
     $this->service->multipart('https://example.com/upload', []);
 })->throws(ApiResponseException::class, 'Network error during multipart request');
 
+// ── PATCH ────────────────────────────────────────────────────────────
+
+test('patch returns response on success', function () {
+    Http::fake([
+        'example.com/*' => Http::response(['updated' => true], 200),
+    ]);
+
+    $response = $this->service->patch('https://example.com/api', ['field' => 'value']);
+
+    expect($response->json('updated'))->toBeTrue();
+});
+
+test('patch throws ApiResponseException on HTTP error', function () {
+    Http::fake([
+        'example.com/*' => Http::response(['error' => 'Forbidden'], 403),
+    ]);
+
+    $this->service->patch('https://example.com/api', ['bad' => 'data']);
+})->throws(ApiResponseException::class, 'Forbidden');
+
+test('patch throws ApiResponseException on network error', function () {
+    Http::fake([
+        'example.com/*' => fn () => throw new \Exception('Connection reset'),
+    ]);
+
+    $this->service->patch('https://example.com/api');
+})->throws(ApiResponseException::class, 'Network error during PATCH request');
+
+// ── DELETE ───────────────────────────────────────────────────────────
+
+test('delete returns response on success', function () {
+    Http::fake([
+        'example.com/*' => Http::response(['deleted' => true], 200),
+    ]);
+
+    $response = $this->service->delete('https://example.com/api', ['id' => 1]);
+
+    expect($response->json('deleted'))->toBeTrue();
+});
+
+test('delete throws ApiResponseException on HTTP error', function () {
+    Http::fake([
+        'example.com/*' => Http::response(['error' => 'Not found'], 404),
+    ]);
+
+    $this->service->delete('https://example.com/api', ['id' => 999]);
+})->throws(ApiResponseException::class, 'Not found');
+
+test('delete throws ApiResponseException on network error', function () {
+    Http::fake([
+        'example.com/*' => fn () => throw new \Exception('Timeout'),
+    ]);
+
+    $this->service->delete('https://example.com/api');
+})->throws(ApiResponseException::class, 'Network error during DELETE request');
+
 // ── Error message extraction ─────────────────────────────────────────
 
 test('handleResponse extracts error from error key', function () {
