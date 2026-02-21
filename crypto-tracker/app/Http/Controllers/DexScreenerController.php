@@ -3,13 +3,32 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\ApiResponseException;
+use App\Models\Network;
 use App\Services\ApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class DexScreenerController extends Controller
 {
     public function __construct(protected ApiService $apiService) {}
+
+    public function index(Request $request): \Inertia\Response
+    {
+        $networks = Network::where('is_active', true)->pluck('id', 'slug');
+
+        $trackedAddresses = [];
+        if ($user = $request->user()) {
+            $trackedAddresses = $user->wallets()->with('network')->get()
+                ->map(fn ($w) => ['network_slug' => $w->network->slug, 'address' => $w->address])
+                ->all();
+        }
+
+        return Inertia::render('Dashboard', [
+            'supportedNetworkMap' => $networks,
+            'trackedAddresses' => $trackedAddresses,
+        ]);
+    }
 
     /**
      * Fetch and return the latest token profiles.

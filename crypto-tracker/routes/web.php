@@ -8,9 +8,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WatchlistController;
 use App\Http\Controllers\WhaleController;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::get('/', [WhaleController::class, 'index'])->name('whales');
 Route::get('/whales/{wallet}/transactions', [WhaleController::class, 'transactions'])->name('whales.transactions');
@@ -23,9 +21,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/telegram-unlink', [ProfileController::class, 'telegramUnlink'])->name('profile.telegram-unlink');
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->name('dashboard');
+Route::get('/dashboard', [DexScreenerController::class, 'index'])->name('dashboard');
 Route::get('/latest-token-profiles/{group?}', [DexScreenerController::class, 'getLatestTokenProfiles'])
     ->where('group', '[01]')->name('dex.latestTokenProfiles');
 Route::get('/latest-boosted-tokens/{group?}', [DexScreenerController::class, 'getLatestBoostedTokens'])

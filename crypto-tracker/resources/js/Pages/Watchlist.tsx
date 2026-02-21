@@ -8,6 +8,7 @@ interface Props {
     wallets: WatchlistWallet[];
     networks: Network[];
     hasTelegramLinked: boolean;
+    nonEvmSlugs: string[];
 }
 
 function truncateAddress(address: string): string {
@@ -60,10 +61,12 @@ function WalletCard({
     wallet,
     onEdit,
     onRemove,
+    isNonEvm,
 }: {
     wallet: WatchlistWallet;
     onEdit: (wallet: WatchlistWallet) => void;
     onRemove: (wallet: WatchlistWallet) => void;
+    isNonEvm: boolean;
 }) {
     const explorerUrl = wallet.network.explorer_url
         ? wallet.network.slug === 'tron'
@@ -139,18 +142,20 @@ function WalletCard({
                             maximumFractionDigits: 2,
                         })}
                     </div>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                        {wallet.pivot.notify_direction !== 'all' && (
-                            <span className="rounded bg-blue-100 px-1.5 py-0.5 text-xs text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                {wallet.pivot.notify_direction}
-                            </span>
-                        )}
-                        {wallet.pivot.notify_cooldown_minutes != null && (
-                            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                                {wallet.pivot.notify_cooldown_minutes}m cooldown
-                            </span>
-                        )}
-                    </div>
+                    {!isNonEvm && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                            {wallet.pivot.notify_direction !== 'all' && (
+                                <span className="rounded bg-blue-100 px-1.5 py-0.5 text-xs text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                    {wallet.pivot.notify_direction}
+                                </span>
+                            )}
+                            {wallet.pivot.notify_cooldown_minutes != null && (
+                                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                                    {wallet.pivot.notify_cooldown_minutes}m cooldown
+                                </span>
+                            )}
+                        </div>
+                    )}
                     {wallet.pivot.notes && (
                         <p className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">
                             {wallet.pivot.notes}
@@ -216,7 +221,8 @@ function WalletCard({
     );
 }
 
-export default function Watchlist({ wallets, networks, hasTelegramLinked }: Props) {
+export default function Watchlist({ wallets, networks, hasTelegramLinked, nonEvmSlugs }: Props) {
+    const nonEvmSet = new Set(nonEvmSlugs);
     const [networkFilter, setNetworkFilter] = useState('');
     const [editingWallet, setEditingWallet] = useState<WatchlistWallet | null>(null);
     const [showAddForm, setShowAddForm] = useState(false);
@@ -268,6 +274,7 @@ export default function Watchlist({ wallets, networks, hasTelegramLinked }: Prop
     });
 
     const selectedNetwork = networks.find((n) => n.id.toString() === addForm.data.network_id);
+    const isAddNetworkNonEvm = selectedNetwork ? nonEvmSet.has(selectedNetwork.slug) : false;
 
     useEffect(() => {
         const address = addForm.data.address.trim();
@@ -560,47 +567,51 @@ export default function Watchlist({ wallets, networks, hasTelegramLinked }: Prop
                                                     className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                                 />
                                             </div>
-                                            <div className="flex items-center gap-1.5">
-                                                <input
-                                                    type="checkbox"
-                                                    id="add_is_notified"
-                                                    checked={addForm.data.is_notified}
-                                                    onChange={(e) =>
-                                                        addForm.setData(
-                                                            'is_notified',
-                                                            e.target.checked,
-                                                        )
-                                                    }
-                                                    className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600"
-                                                />
-                                                <label
-                                                    htmlFor="add_is_notified"
-                                                    className="flex flex-col text-xs text-gray-700 dark:text-gray-300"
-                                                >
-                                                    <span>Notify about</span>
-                                                    <span>transactions</span>
-                                                </label>
-                                            </div>
-                                            {addForm.data.is_notified && (
-                                                <div className="w-full sm:w-36">
-                                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                                                        Notify via
-                                                    </label>
-                                                    <select
-                                                        value={addForm.data.notify_via}
-                                                        onChange={(e) =>
-                                                            addForm.setData(
-                                                                'notify_via',
-                                                                e.target.value,
-                                                            )
-                                                        }
-                                                        className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                                    >
-                                                        <option value="email">Email</option>
-                                                        <option value="telegram">Telegram</option>
-                                                        <option value="both">Both</option>
-                                                    </select>
-                                                </div>
+                                            {!isAddNetworkNonEvm && (
+                                                <>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <input
+                                                            type="checkbox"
+                                                            id="add_is_notified"
+                                                            checked={addForm.data.is_notified}
+                                                            onChange={(e) =>
+                                                                addForm.setData(
+                                                                    'is_notified',
+                                                                    e.target.checked,
+                                                                )
+                                                            }
+                                                            className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600"
+                                                        />
+                                                        <label
+                                                            htmlFor="add_is_notified"
+                                                            className="flex flex-col text-xs text-gray-700 dark:text-gray-300"
+                                                        >
+                                                            <span>Notify about</span>
+                                                            <span>transactions</span>
+                                                        </label>
+                                                    </div>
+                                                    {addForm.data.is_notified && (
+                                                        <div className="w-full sm:w-36">
+                                                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                                Notify via
+                                                            </label>
+                                                            <select
+                                                                value={addForm.data.notify_via}
+                                                                onChange={(e) =>
+                                                                    addForm.setData(
+                                                                        'notify_via',
+                                                                        e.target.value,
+                                                                    )
+                                                                }
+                                                                className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                            >
+                                                                <option value="email">Email</option>
+                                                                <option value="telegram">Telegram</option>
+                                                                <option value="both">Both</option>
+                                                            </select>
+                                                        </div>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
 
@@ -628,7 +639,7 @@ export default function Watchlist({ wallets, networks, hasTelegramLinked }: Prop
 
                                         {showAddAdvanced && (
                                             <div className="space-y-3">
-                                                {addForm.data.is_notified && (
+                                                {!isAddNetworkNonEvm && addForm.data.is_notified && (
                                                     <div className="flex flex-wrap items-end gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
                                                         <div className="w-full">
                                                             <h6 className="text-sm">Notification settings</h6>
@@ -774,7 +785,9 @@ export default function Watchlist({ wallets, networks, hasTelegramLinked }: Prop
                     </div>
 
                     {/* Edit Modal */}
-                    {editingWallet && (
+                    {editingWallet && (() => {
+                        const isEditNetworkNonEvm = nonEvmSet.has(editingWallet.network.slug);
+                        return (
                         <div className="mb-6 overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
                             <div className="p-4">
                                 <h3 className="mb-3 text-md font-medium text-gray-900 dark:text-white">
@@ -795,47 +808,51 @@ export default function Watchlist({ wallets, networks, hasTelegramLinked }: Prop
                                                 className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                             />
                                         </div>
-                                        <div className="flex items-center gap-1.5 pb-1">
-                                            <input
-                                                type="checkbox"
-                                                id="is_notified"
-                                                checked={editForm.data.is_notified}
-                                                onChange={(e) =>
-                                                    editForm.setData(
-                                                        'is_notified',
-                                                        e.target.checked,
-                                                    )
-                                                }
-                                                className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600"
-                                            />
-                                            <label
-                                                htmlFor="is_notified"
-                                                className="flex flex-col text-xs text-gray-700 dark:text-gray-300"
-                                            >
-                                                <span>Notify about</span>
-                                                <span>transactions</span>
-                                            </label>
-                                        </div>
-                                        {editForm.data.is_notified && (
-                                            <div className="w-full sm:w-36">
-                                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                                                    Notify via
-                                                </label>
-                                                <select
-                                                    value={editForm.data.notify_via}
-                                                    onChange={(e) =>
-                                                        editForm.setData(
-                                                            'notify_via',
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                                >
-                                                    <option value="email">Email</option>
-                                                    <option value="telegram">Telegram</option>
-                                                    <option value="both">Both</option>
-                                                </select>
-                                            </div>
+                                        {!isEditNetworkNonEvm && (
+                                            <>
+                                                <div className="flex items-center gap-1.5 pb-1">
+                                                    <input
+                                                        type="checkbox"
+                                                        id="is_notified"
+                                                        checked={editForm.data.is_notified}
+                                                        onChange={(e) =>
+                                                            editForm.setData(
+                                                                'is_notified',
+                                                                e.target.checked,
+                                                            )
+                                                        }
+                                                        className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600"
+                                                    />
+                                                    <label
+                                                        htmlFor="is_notified"
+                                                        className="flex flex-col text-xs text-gray-700 dark:text-gray-300"
+                                                    >
+                                                        <span>Notify about</span>
+                                                        <span>transactions</span>
+                                                    </label>
+                                                </div>
+                                                {editForm.data.is_notified && (
+                                                    <div className="w-full sm:w-36">
+                                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                            Notify via
+                                                        </label>
+                                                        <select
+                                                            value={editForm.data.notify_via}
+                                                            onChange={(e) =>
+                                                                editForm.setData(
+                                                                    'notify_via',
+                                                                    e.target.value,
+                                                                )
+                                                            }
+                                                            className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                                        >
+                                                            <option value="email">Email</option>
+                                                            <option value="telegram">Telegram</option>
+                                                            <option value="both">Both</option>
+                                                        </select>
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
                                     </div>
 
@@ -863,7 +880,7 @@ export default function Watchlist({ wallets, networks, hasTelegramLinked }: Prop
 
                                     {showEditAdvanced && (
                                         <div className="space-y-3">
-                                            {editForm.data.is_notified && (
+                                            {!isEditNetworkNonEvm && editForm.data.is_notified && (
                                                 <div className="flex flex-wrap items-end gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
                                                     <div className="w-full">
                                                         <h6 className="text-sm">Notification settings</h6>
@@ -988,7 +1005,8 @@ export default function Watchlist({ wallets, networks, hasTelegramLinked }: Prop
                                 </form>
                             </div>
                         </div>
-                    )}
+                        );
+                    })()}
 
                     {/* Wallet List */}
                     {wallets.length === 0 ? (
@@ -1009,6 +1027,7 @@ export default function Watchlist({ wallets, networks, hasTelegramLinked }: Prop
                                         wallet={wallet}
                                         onEdit={startEdit}
                                         onRemove={handleRemove}
+                                        isNonEvm={nonEvmSet.has(wallet.network.slug)}
                                     />
                                 ))}
                         </div>

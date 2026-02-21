@@ -9,10 +9,11 @@ use App\Models\Wallet;
 use App\Services\WebhookAddressService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class WatchlistController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): Response
     {
         $user = $request->user();
 
@@ -30,6 +31,7 @@ class WatchlistController extends Controller
             'wallets' => $wallets,
             'networks' => $networks,
             'hasTelegramLinked' => $user->telegramChat !== null,
+            'nonEvmSlugs' => WebhookAddressService::NON_EVM_NETWORKS,
         ]);
     }
 
