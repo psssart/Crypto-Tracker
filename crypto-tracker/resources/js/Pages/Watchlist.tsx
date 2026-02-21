@@ -7,6 +7,7 @@ import { FormEventHandler, useEffect, useRef, useState } from 'react';
 interface Props {
     wallets: WatchlistWallet[];
     networks: Network[];
+    hasTelegramLinked: boolean;
 }
 
 function truncateAddress(address: string): string {
@@ -26,6 +27,21 @@ function isValidAddress(address: string, networkSlug: string): boolean {
         case 'bsc':
         case 'arbitrum':
         case 'base':
+        case 'optimism':
+        case 'avalanche':
+        case 'fantom':
+        case 'cronos':
+        case 'gnosis':
+        case 'linea':
+        case 'flow':
+        case 'chiliz':
+        case 'pulsechain':
+        case 'sei':
+        case 'ronin':
+        case 'lisk':
+        case 'monad':
+        case 'hyperevm':
+        case 'palm':
             return /^0x[0-9a-fA-F]{40}$/.test(trimmed);
         case 'solana':
             return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(trimmed);
@@ -200,7 +216,7 @@ function WalletCard({
     );
 }
 
-export default function Watchlist({ wallets, networks }: Props) {
+export default function Watchlist({ wallets, networks, hasTelegramLinked }: Props) {
     const [networkFilter, setNetworkFilter] = useState('');
     const [editingWallet, setEditingWallet] = useState<WatchlistWallet | null>(null);
     const [showAddForm, setShowAddForm] = useState(false);
@@ -355,6 +371,41 @@ export default function Watchlist({ wallets, networks }: Props) {
 
             <div className="py-6">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+                    {!hasTelegramLinked &&
+                        wallets.some(
+                            (w) =>
+                                w.pivot.is_notified &&
+                                (w.pivot.notify_via === 'telegram' || w.pivot.notify_via === 'both'),
+                        ) && (
+                            <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-600 dark:bg-amber-900/20">
+                                <div className="flex items-start gap-3">
+                                    <svg
+                                        className="mt-0.5 h-5 w-5 shrink-0 text-amber-500 dark:text-amber-400"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+                                        />
+                                    </svg>
+                                    <p className="text-sm text-amber-800 dark:text-amber-200">
+                                        You have wallets with Telegram notifications enabled, but your
+                                        Telegram account is not connected.{' '}
+                                        <Link
+                                            href={route('profile.edit')}
+                                            className="font-semibold underline hover:text-amber-900 dark:hover:text-amber-100"
+                                        >
+                                            Configure it here
+                                        </Link>
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                     {/* Add Wallet - Collapsible */}
                     <div className="mb-6">
                         {!showAddForm ? (
@@ -381,7 +432,7 @@ export default function Watchlist({ wallets, networks }: Props) {
                             <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
                                 <div className="p-4">
                                     <form onSubmit={handleAdd} className="space-y-3">
-                                        <div className="flex flex-wrap items-end gap-3">
+                                        <div className="flex flex-wrap items-top gap-3">
                                             <div className="w-full sm:w-auto">
                                                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
                                                     Network
@@ -509,7 +560,7 @@ export default function Watchlist({ wallets, networks }: Props) {
                                                     className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                                 />
                                             </div>
-                                            <div className="flex items-center gap-1.5 pb-1">
+                                            <div className="flex items-center gap-1.5">
                                                 <input
                                                     type="checkbox"
                                                     id="add_is_notified"
@@ -730,7 +781,7 @@ export default function Watchlist({ wallets, networks }: Props) {
                                     Edit: {truncateAddress(editingWallet.address)}
                                 </h3>
                                 <form onSubmit={handleEdit} className="space-y-3">
-                                    <div className="flex flex-wrap items-end gap-3">
+                                    <div className="flex flex-wrap items-top gap-3">
                                         <div className="w-full sm:w-40">
                                             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
                                                 Label

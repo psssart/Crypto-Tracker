@@ -37,6 +37,21 @@ class ProcessCryptoWebhook implements ShouldQueue
         'tron' => 'tron',
         'arbitrum' => 'ethereum',
         'base' => 'ethereum',
+        'optimism' => 'ethereum',
+        'avalanche' => 'avalanche-2',
+        'fantom' => 'fantom',
+        'cronos' => 'crypto-com-chain',
+        'gnosis' => 'xdai',
+        'linea' => 'ethereum',
+        'flow' => 'flow',
+        'chiliz' => 'chiliz',
+        'pulsechain' => 'pulsechain',
+        'sei' => 'sei-network',
+        'ronin' => 'ronin',
+        'lisk' => 'ethereum',
+        'monad' => 'monad',
+        'hyperevm' => 'hyperliquid',
+        'palm' => 'palm',
     ];
 
     private const HANDLER_MAP = [

@@ -25,6 +25,7 @@ class WhaleController extends Controller
         $whales = $query->orderByDesc('balance_usd')->get();
         $networks = Network::where('is_active', true)
             ->whereNotIn('slug', $excludedNetworks)
+            ->whereHas('wallets', fn ($q) => $q->where('is_whale', true))
             ->orderBy('name')
             ->get(['id', 'name', 'slug', 'currency_symbol']);
 

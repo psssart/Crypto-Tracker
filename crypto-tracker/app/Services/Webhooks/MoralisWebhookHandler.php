@@ -11,11 +11,26 @@ use kornrunner\Keccak;
 class MoralisWebhookHandler implements CryptoWebhookHandler
 {
     private const CHAIN_MAP = [
-        '0x1'    => 'ethereum',
-        '0x89'   => 'polygon',
-        '0x38'   => 'bsc',
-        '0xa4b1' => 'arbitrum',
-        '0x2105' => 'base',
+        '0x1'        => 'ethereum',
+        '0x89'       => 'polygon',
+        '0x38'       => 'bsc',
+        '0xa4b1'     => 'arbitrum',
+        '0x2105'     => 'base',
+        '0xa'        => 'optimism',
+        '0xa86a'     => 'avalanche',
+        '0xfa'       => 'fantom',
+        '0x19'       => 'cronos',
+        '0x64'       => 'gnosis',
+        '0xe708'     => 'linea',
+        '0x2eb'      => 'flow',
+        '0x15b38'    => 'chiliz',
+        '0x171'      => 'pulsechain',
+        '0x531'      => 'sei',
+        '0x7e4'      => 'ronin',
+        '0x46f'      => 'lisk',
+        '0x279f'     => 'monad',
+        '0x3e7'      => 'hyperevm',
+        '0x2a15c308d' => 'palm',
     ];
 
     public function verifySignature(Request $request): bool

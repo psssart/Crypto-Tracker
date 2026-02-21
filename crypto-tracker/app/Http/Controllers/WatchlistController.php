@@ -6,6 +6,7 @@ use App\Jobs\SyncWalletHistory;
 use App\Jobs\UpdateWebhookAddress;
 use App\Models\Network;
 use App\Models\Wallet;
+use App\Services\WebhookAddressService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -13,7 +14,9 @@ class WatchlistController extends Controller
 {
     public function index(Request $request)
     {
-        $wallets = $request->user()
+        $user = $request->user();
+
+        $wallets = $user
             ->wallets()
             ->with('network')
             ->withCount('transactions')
@@ -26,12 +29,13 @@ class WatchlistController extends Controller
         return Inertia::render('Watchlist', [
             'wallets' => $wallets,
             'networks' => $networks,
+            'hasTelegramLinked' => $user->telegramChat !== null,
         ]);
     }
 
     public const FREE_WALLET_LIMIT = 4;
 
-    public function store(Request $request)
+    public function store(Request $request, WebhookAddressService $webhookService)
     {
         $validated = $request->validate([
             'network_id' => 'required|exists:networks,id',
@@ -46,6 +50,11 @@ class WatchlistController extends Controller
         ]);
 
         $user = $request->user();
+        $network = Network::find($validated['network_id']);
+
+        if (!$webhookService->addressExistsOnNetwork($network, $validated['address'])) {
+            return back()->withErrors(['address' => "This address has no activity on {$network->name}. Please verify you selected the correct network."]);
+        }
 
         $hasWalletApiKeys = $user->integrations()
             ->whereIn('provider', ['moralis', 'alchemy', 'etherscan'])
@@ -79,6 +88,10 @@ class WatchlistController extends Controller
         }
 
         SyncWalletHistory::dispatch($wallet, $user->id);
+
+        if (in_array($network->slug, WebhookAddressService::NON_EVM_NETWORKS, true)) {
+            return back()->with('info', "{$network->name} live transactions tracking is not yet supported");
+        }
 
         return back();
     }

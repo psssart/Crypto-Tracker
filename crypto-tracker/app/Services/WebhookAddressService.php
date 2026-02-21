@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\Network;
 use App\Models\Wallet;
 use Illuminate\Support\Facades\Log;
 
@@ -11,12 +12,71 @@ class WebhookAddressService
 {
     private const ALCHEMY_NETWORKS = ['ethereum', 'arbitrum', 'solana', 'polygon', 'base'];
 
-    private const MORALIS_EVM_NETWORKS = ['bsc', 'avalanche', 'fantom', 'cronos', 'gnosis', 'optimism'];
+    private const MORALIS_EVM_NETWORKS = [
+        'bsc', 'avalanche', 'fantom', 'cronos', 'gnosis', 'optimism',
+        'linea', 'flow', 'chiliz', 'pulsechain', 'sei', 'ronin',
+        'lisk', 'monad', 'hyperevm', 'palm',
+    ];
 
-    private const NON_EVM_NETWORKS = ['bitcoin', 'tron', 'litecoin', 'dogecoin', 'ripple'];
+    public const NON_EVM_NETWORKS = ['bitcoin', 'tron', 'litecoin', 'dogecoin', 'ripple'];
 
     public function __construct(private ApiService $api)
     {
+    }
+
+    public function addressExistsOnNetwork(Network $network, string $address): bool
+    {
+        $slug = $network->slug;
+
+        // Skip non-EVM networks (different address formats prevent cross-network mistakes)
+        if (in_array($slug, self::NON_EVM_NETWORKS, true) || $slug === 'solana') {
+            return true;
+        }
+
+        $apiKey = config('services.moralis.api_key');
+
+        // Fail-open if no API key or no chain_id
+        if (!$apiKey || !$network->chain_id) {
+            return true;
+        }
+
+        try {
+            $chainHex = '0x' . dechex($network->chain_id);
+            $headers = ['X-API-Key' => $apiKey];
+            $address = strtolower($address);
+
+            // Check native balance
+            $balanceResponse = $this->api->get(
+                "https://deep-index.moralis.io/api/v2.2/{$address}/balance",
+                ['chain' => $chainHex],
+                $headers,
+            );
+
+            $balance = $balanceResponse->json('balance') ?? '0';
+
+            if ($balance !== '0') {
+                return true;
+            }
+
+            // Balance is zero — check for any transaction history
+            $txResponse = $this->api->get(
+                "https://deep-index.moralis.io/api/v2.2/{$address}",
+                ['chain' => $chainHex, 'limit' => 1],
+                $headers,
+            );
+
+            $results = $txResponse->json('result') ?? [];
+
+            return count($results) > 0;
+        } catch (\Throwable $e) {
+            Log::warning('WebhookAddressService: address existence check failed, allowing through', [
+                'network' => $slug,
+                'address' => $address,
+                'error' => $e->getMessage(),
+            ]);
+
+            return true;
+        }
     }
 
     public function addAddress(Wallet $wallet): void
