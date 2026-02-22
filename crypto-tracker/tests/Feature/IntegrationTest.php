@@ -75,7 +75,7 @@ test('store creates a new integration', function () {
         ]);
 
     $response->assertRedirect(route('integrations.index'));
-    $response->assertSessionHas('status', 'integration-saved');
+    $response->assertSessionHas('status', 'Integration successfully saved');
 
     $this->assertDatabaseHas('user_integrations', [
         'user_id' => $user->id,
@@ -171,7 +171,7 @@ test('update modifies an existing integration', function () {
         ]);
 
     $response->assertRedirect(route('integrations.index'));
-    $response->assertSessionHas('status', 'integration-updated');
+    $response->assertSessionHas('status', 'Integration updated');
 
     $integration->refresh();
     expect($integration->api_key)->toBe('updated-key');
@@ -229,7 +229,7 @@ test('destroy deletes an integration', function () {
         ->delete(route('integrations.destroy', $integration));
 
     $response->assertRedirect(route('integrations.index'));
-    $response->assertSessionHas('status', 'integration-deleted');
+    $response->assertSessionHas('status', 'Integration deleted');
 
     $this->assertDatabaseMissing('user_integrations', ['id' => $integration->id]);
 });

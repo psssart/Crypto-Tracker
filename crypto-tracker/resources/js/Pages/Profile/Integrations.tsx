@@ -232,12 +232,6 @@ export default function Integrations({ providers, integrations, status }: Props)
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
-                    {status && (
-                        <div className="rounded-md bg-green-50 p-4 text-sm text-green-800 dark:bg-green-900/30 dark:text-green-200">
-                            {status}
-                        </div>
-                    )}
-
                     <div className="bg-white p-6 shadow sm:rounded-lg dark:bg-gray-800">
                         <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
                             Connect your account to available integrations. API keys are stored

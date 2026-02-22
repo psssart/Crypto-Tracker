@@ -27,11 +27,18 @@ class WatchlistController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'slug', 'currency_symbol', 'explorer_url']);
 
+        $hasWalletApiKeys = $user->integrations()
+            ->whereIn('provider', ['moralis', 'alchemy', 'etherscan'])
+            ->whereNull('revoked_at')
+            ->whereNotNull('api_key')
+            ->exists();
+
         return Inertia::render('Watchlist', [
             'wallets' => $wallets,
             'networks' => $networks,
             'hasTelegramLinked' => $user->telegramChat !== null,
             'nonEvmSlugs' => WebhookAddressService::NON_EVM_NETWORKS,
+            'isAtFreeLimit' => !$hasWalletApiKeys && $wallets->count() >= self::FREE_WALLET_LIMIT,
         ]);
     }
 
@@ -98,7 +105,7 @@ class WatchlistController extends Controller
             return back()->with('info', "{$network->name} live transactions tracking is not yet supported");
         }
 
-        return back();
+        return back()->with('success');
     }
 
     public function update(Request $request, Wallet $wallet)
@@ -121,7 +128,7 @@ class WatchlistController extends Controller
 
         $user->wallets()->updateExistingPivot($wallet->id, $validated);
 
-        return back();
+        return back()->with('success', 'Wallet updated successfully.');
     }
 
     public function destroy(Request $request, Wallet $wallet)
@@ -138,6 +145,6 @@ class WatchlistController extends Controller
             UpdateWebhookAddress::dispatch($wallet, 'remove');
         }
 
-        return back();
+        return back()->with('success', 'Wallet deleted.');
     }
 }

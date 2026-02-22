@@ -72,7 +72,7 @@ class IntegrationController extends Controller
             );
 
         return Redirect::route('integrations.index')
-            ->with('status', 'integration-saved');
+            ->with('status', 'Integration successfully saved');
     }
 
     public function update(Request $request, UserIntegration $integration): RedirectResponse
@@ -110,7 +110,7 @@ class IntegrationController extends Controller
         $integration->update($updateData);
 
         return Redirect::route('integrations.index')
-            ->with('status', 'integration-updated');
+            ->with('status', 'Integration updated');
     }
 
     public function destroy(Request $request, UserIntegration $integration): RedirectResponse
@@ -122,7 +122,7 @@ class IntegrationController extends Controller
         $integration->delete();
 
         return Redirect::route('integrations.index')
-            ->with('status', 'integration-deleted');
+            ->with('status', 'Integration deleted');
     }
 
     public function check(Request $request, IntegrationHealthService $health): JsonResponse

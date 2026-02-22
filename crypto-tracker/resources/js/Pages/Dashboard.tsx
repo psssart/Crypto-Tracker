@@ -4,7 +4,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
-import { flashError } from '@/Components/FlashMessages';
+import { flashError, flashSuccess } from '@/Components/FlashMessages';
 
 // Icon components
 import CopyIcon from '@/Components/Icons/Copy';
@@ -103,10 +103,32 @@ export default function Dashboard({ supportedNetworkMap, trackedAddresses }: Pro
                 preserveScroll: true,
                 onSuccess: () => {
                     setTrackedSet((prev) => new Set(prev).add(key));
+                    flashSuccess(
+                        <span>
+                            Wallet added for tracking.{' '}
+                            <a
+                                href={route('watchlist.index')}
+                                className="underline font-semibold"
+                            >
+                                Configure it on your watchlist
+                            </a>
+                        </span>,
+                    );
                 },
                 onError: (errors) => {
                     if (errors.limit) {
-                        flashError(errors.limit);
+                        flashError(
+                            <span>
+                                You have reached the free limit of tracked wallets.{' '}
+                                <a
+                                    href={route('integrations.index')}
+                                    className="underline font-semibold"
+                                >
+                                    Configure your API keys
+                                </a>{' '}
+                                to track more.
+                            </span>,
+                        );
                     } else if (errors.address) {
                         flashError(errors.address);
                     }

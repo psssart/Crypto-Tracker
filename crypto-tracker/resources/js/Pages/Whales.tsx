@@ -1,4 +1,4 @@
-import { flashError } from '@/Components/FlashMessages';
+import { flashError, flashSuccess } from '@/Components/FlashMessages';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { Network, PageProps, WhaleWallet } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
@@ -198,7 +198,20 @@ export default function Whales({ auth, whales, networks, activeNetwork, trackedW
             },
             {
                 preserveScroll: true,
-                onSuccess: () => setTrackedIds((prev) => [...prev, whale.id]),
+                onSuccess: () => {
+                    setTrackedIds((prev) => [...prev, whale.id]);
+                    flashSuccess(
+                        <span>
+                            Wallet added for tracking.{' '}
+                            <a
+                                href={route('watchlist.index')}
+                                className="underline font-semibold"
+                            >
+                                Configure it on your watchlist
+                            </a>
+                        </span>,
+                    );
+                },
                 onError: (errors) => {
                     if (errors.limit) {
                         flashError(
@@ -213,6 +226,8 @@ export default function Whales({ auth, whales, networks, activeNetwork, trackedW
                                 to track more.
                             </span>,
                         );
+                    } else if (errors.address) {
+                        flashError(errors.address);
                     }
                 },
             },

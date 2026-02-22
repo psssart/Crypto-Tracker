@@ -9,6 +9,9 @@ set -e
 
 if [ "$1" = "php-fpm" ]; then
   if [ "$APP_ENV" = "local" ]; then
+    echo "››› Local environment – opening storage permissions"
+    chmod -R 777 /var/www/storage /var/www/bootstrap/cache 2>/dev/null || true
+
     echo "››› Local environment – clearing Laravel caches"
     php artisan optimize:clear
     php artisan config:clear
