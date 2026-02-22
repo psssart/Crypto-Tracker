@@ -48,6 +48,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/watchlist/{wallet}', [WatchlistController::class, 'destroy'])->name('watchlist.destroy');
 
     Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions.index');
+    Route::post('/transactions/fetch', [TransactionController::class, 'fetch'])->name('transactions.fetch');
 });
 
 require __DIR__.'/auth.php';

@@ -1,9 +1,10 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import DataTable, { Column, MobileRenderHelpers } from '@/Components/DataTable';
 import DateRangeSelect from '@/Components/DateRangeSelect';
+import { flashError, flashInfo } from '@/Components/FlashMessages';
 import { Head, Link, router } from '@inertiajs/react';
 import { Network, Transaction } from '@/types';
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 interface WalletOption {
     id: number;
@@ -18,6 +19,7 @@ interface Props {
     transactions: Transaction[];
     dateFrom: string;
     dateTo: string;
+    lastSyncedAt: string | null;
 }
 
 function truncateAddress(address: string): string {
@@ -62,14 +64,81 @@ function DirectionBadge({ direction }: { direction: Direction }) {
     );
 }
 
+const COOLDOWN_SECONDS = 60;
+
 export default function Transactions({
     wallets,
     activeWalletId,
     transactions,
     dateFrom,
     dateTo,
+    lastSyncedAt,
 }: Props) {
     const activeWallet = wallets.find((w) => w.id === activeWalletId) ?? null;
+
+    const [cooldown, setCooldown] = useState(0);
+    const [fetching, setFetching] = useState(false);
+    const lastFetchParams = useRef<string | null>(null);
+    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Initialize cooldown from lastSyncedAt
+    useEffect(() => {
+        if (!lastSyncedAt) return;
+        const elapsed = Math.floor((Date.now() - new Date(lastSyncedAt).getTime()) / 1000);
+        const remaining = COOLDOWN_SECONDS - elapsed;
+        if (remaining > 0) {
+            setCooldown(remaining);
+            lastFetchParams.current = `${activeWalletId}:${dateFrom}:${dateTo}`;
+        }
+    }, [lastSyncedAt, activeWalletId, dateFrom, dateTo]);
+
+    // Countdown timer
+    useEffect(() => {
+        if (cooldown <= 0) {
+            if (timerRef.current) clearInterval(timerRef.current);
+            return;
+        }
+        timerRef.current = setInterval(() => {
+            setCooldown((prev) => {
+                if (prev <= 1) {
+                    if (timerRef.current) clearInterval(timerRef.current);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => {
+            if (timerRef.current) clearInterval(timerRef.current);
+        };
+    }, [cooldown > 0]);
+
+    const handleFetch = useCallback(() => {
+        if (!activeWalletId || fetching || cooldown > 0) return;
+
+        const currentParams = `${activeWalletId}:${dateFrom}:${dateTo}`;
+        if (lastFetchParams.current === currentParams) {
+            flashError('Change the wallet or date range before fetching again.');
+            return;
+        }
+
+        setFetching(true);
+        router.post(
+            route('transactions.fetch'),
+            { wallet_id: activeWalletId, date_from: dateFrom, date_to: dateTo },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    lastFetchParams.current = currentParams;
+                    setCooldown(COOLDOWN_SECONDS);
+                },
+                onError: () => {
+                    flashError('Failed to start fetch. Please try again later.');
+                },
+                onFinish: () => setFetching(false),
+            },
+        );
+    }, [activeWalletId, dateFrom, dateTo, fetching, cooldown]);
 
     const navigate = (params: Record<string, string | number>) => {
         router.get(
@@ -342,16 +411,16 @@ export default function Transactions({
                         </div>
                     ) : (
                         <>
-                            {/* Controls: Wallet Selector + Date Range */}
-                            <div className="mb-6 flex flex-wrap items-end gap-6">
+                            {/* Controls: Wallet Selector + Date Range + Fetch */}
+                            <div className="mb-6 flex flex-wrap items-end gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
                                         Wallet
                                     </label>
                                     <select
                                         value={activeWalletId ?? ''}
                                         onChange={(e) => handleWalletChange(e.target.value)}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-72 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                        className="mt-1 block w-full rounded-md border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-56 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                     >
                                         {wallets.map((w) => (
                                             <option key={w.id} value={w.id}>
@@ -366,6 +435,49 @@ export default function Transactions({
                                     to={dateTo}
                                     onChange={handleDateChange}
                                 />
+                                <button
+                                    type="button"
+                                    onClick={handleFetch}
+                                    disabled={!activeWalletId || fetching || cooldown > 0}
+                                    className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {fetching ? (
+                                        <svg
+                                            className="h-4 w-4 animate-spin"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <circle
+                                                className="opacity-25"
+                                                cx="12"
+                                                cy="12"
+                                                r="10"
+                                                stroke="currentColor"
+                                                strokeWidth="4"
+                                            />
+                                            <path
+                                                className="opacity-75"
+                                                fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                                            />
+                                        </svg>
+                                    ) : (
+                                        <svg
+                                            className="h-4 w-4"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                            />
+                                        </svg>
+                                    )}
+                                    {cooldown > 0 ? `Fetch (${cooldown}s)` : 'Fetch'}
+                                </button>
                             </div>
 
                             <DataTable

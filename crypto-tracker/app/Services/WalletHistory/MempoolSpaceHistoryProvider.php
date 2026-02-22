@@ -34,52 +34,12 @@ class MempoolSpaceHistoryProvider implements WalletHistoryProvider
         $response = $this->api->get($url);
         $transactions = $response->json() ?? [];
 
-        $walletAddr = strtolower($wallet->address);
         $count = 0;
 
         foreach ($transactions as $tx) {
-            $txid = $tx['txid'] ?? null;
-            if (!$txid) {
-                continue;
+            if ($this->upsertTransaction($wallet, $tx)) {
+                $count++;
             }
-
-            // Calculate net value for this wallet from vin/vout
-            $sent = '0';
-            foreach ($tx['vin'] ?? [] as $input) {
-                $inputAddr = strtolower($input['prevout']['scriptpubkey_address'] ?? '');
-                if ($inputAddr === $walletAddr) {
-                    $sent = bcadd($sent, (string) ($input['prevout']['value'] ?? 0), 0);
-                }
-            }
-
-            $received = '0';
-            foreach ($tx['vout'] ?? [] as $output) {
-                $outputAddr = strtolower($output['scriptpubkey_address'] ?? '');
-                if ($outputAddr === $walletAddr) {
-                    $received = bcadd($received, (string) ($output['value'] ?? 0), 0);
-                }
-            }
-
-            $netSat = bcsub($received, $sent, 0);
-            $isIncoming = bccomp($netSat, '0', 0) >= 0;
-            $absAmountSat = ltrim($netSat, '-');
-
-            $feeSat = (string) ($tx['fee'] ?? '0');
-
-            Transaction::updateOrCreate(
-                ['hash' => $txid, 'wallet_id' => $wallet->id],
-                [
-                    'from_address' => $isIncoming ? 'External / Multiple' : $wallet->address,
-                    'to_address' => $isIncoming ? $wallet->address : 'External / Multiple',
-                    'amount' => self::satoshiToBtc($absAmountSat),
-                    'fee' => self::satoshiToBtc($feeSat),
-                    'block_number' => $tx['status']['block_height'] ?? null,
-                    'mined_at' => isset($tx['status']['block_time'])
-                        ? Carbon::createFromTimestamp($tx['status']['block_time'])
-                        : null,
-                ],
-            );
-            $count++;
         }
 
         Log::info('MempoolSpaceHistoryProvider: stored transactions', [
@@ -88,6 +48,66 @@ class MempoolSpaceHistoryProvider implements WalletHistoryProvider
         ]);
 
         return $count;
+    }
+
+    public function fetchTransactions(Wallet $wallet, Carbon $from, Carbon $to): int
+    {
+        $url = self::BASE_URL . '/address/' . $wallet->address . '/txs';
+        $fromTs = $from->startOfDay()->timestamp;
+        $toTs = $to->endOfDay()->timestamp;
+        $lastTxid = null;
+        $total = 0;
+        $maxPages = 20;
+
+        for ($page = 0; $page < $maxPages; $page++) {
+            $fetchUrl = $lastTxid ? "$url/chain/$lastTxid" : $url;
+            $response = $this->api->get($fetchUrl);
+            $transactions = $response->json() ?? [];
+
+            if (empty($transactions)) {
+                break;
+            }
+
+            $pastRange = false;
+            foreach ($transactions as $tx) {
+                $blockTime = $tx['status']['block_time'] ?? null;
+
+                // Skip unconfirmed or transactions after our range
+                if ($blockTime === null) {
+                    continue;
+                }
+                if ($blockTime > $toTs) {
+                    continue;
+                }
+                if ($blockTime < $fromTs) {
+                    $pastRange = true;
+                    break;
+                }
+
+                if ($this->upsertTransaction($wallet, $tx)) {
+                    $total++;
+                }
+            }
+
+            if ($pastRange) {
+                break;
+            }
+
+            $lastTx = end($transactions);
+            $lastTxid = $lastTx['txid'] ?? null;
+            if (! $lastTxid || count($transactions) < 25) {
+                break;
+            }
+        }
+
+        Log::info('MempoolSpaceHistoryProvider: fetched transactions for date range', [
+            'wallet_id' => $wallet->id,
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'count' => $total,
+        ]);
+
+        return $total;
     }
 
     public function syncBalance(Wallet $wallet): void
@@ -112,6 +132,53 @@ class MempoolSpaceHistoryProvider implements WalletHistoryProvider
         }
 
         $wallet->update(['balance_usd' => $balanceUsd]);
+    }
+
+    private function upsertTransaction(Wallet $wallet, array $tx): bool
+    {
+        $txid = $tx['txid'] ?? null;
+        if (! $txid) {
+            return false;
+        }
+
+        $walletAddr = strtolower($wallet->address);
+
+        $sent = '0';
+        foreach ($tx['vin'] ?? [] as $input) {
+            $inputAddr = strtolower($input['prevout']['scriptpubkey_address'] ?? '');
+            if ($inputAddr === $walletAddr) {
+                $sent = bcadd($sent, (string) ($input['prevout']['value'] ?? 0), 0);
+            }
+        }
+
+        $received = '0';
+        foreach ($tx['vout'] ?? [] as $output) {
+            $outputAddr = strtolower($output['scriptpubkey_address'] ?? '');
+            if ($outputAddr === $walletAddr) {
+                $received = bcadd($received, (string) ($output['value'] ?? 0), 0);
+            }
+        }
+
+        $netSat = bcsub($received, $sent, 0);
+        $isIncoming = bccomp($netSat, '0', 0) >= 0;
+        $absAmountSat = ltrim($netSat, '-');
+        $feeSat = (string) ($tx['fee'] ?? '0');
+
+        Transaction::updateOrCreate(
+            ['hash' => $txid, 'wallet_id' => $wallet->id],
+            [
+                'from_address' => $isIncoming ? 'External / Multiple' : $wallet->address,
+                'to_address' => $isIncoming ? $wallet->address : 'External / Multiple',
+                'amount' => self::satoshiToBtc($absAmountSat),
+                'fee' => self::satoshiToBtc($feeSat),
+                'block_number' => $tx['status']['block_height'] ?? null,
+                'mined_at' => isset($tx['status']['block_time'])
+                    ? Carbon::createFromTimestamp($tx['status']['block_time'])
+                    : null,
+            ],
+        );
+
+        return true;
     }
 
     private static function satoshiToBtc(string $satoshi): string

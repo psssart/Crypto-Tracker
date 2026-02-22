@@ -46,43 +46,9 @@ class TronGridHistoryProvider implements WalletHistoryProvider
 
         $count = 0;
         foreach ($transactions as $tx) {
-            $txId = $tx['txID'] ?? null;
-            if (!$txId) {
-                continue;
+            if ($this->upsertTransaction($wallet, $tx)) {
+                $count++;
             }
-
-            // Parse TransferContract from raw_data.contract
-            $contract = $tx['raw_data']['contract'][0] ?? [];
-            $contractType = $contract['type'] ?? '';
-            $paramValue = $contract['parameter']['value'] ?? [];
-
-            $fromAddress = '';
-            $toAddress = '';
-            $amount = '0';
-
-            if ($contractType === 'TransferContract') {
-                $fromAddress = strtolower($paramValue['owner_address'] ?? '');
-                $toAddress = strtolower($paramValue['to_address'] ?? '');
-                $amount = self::sunToTrx((string) ($paramValue['amount'] ?? '0'));
-            }
-
-            Transaction::updateOrCreate(
-                ['hash' => $txId],
-                [
-                    'wallet_id' => $wallet->id,
-                    'from_address' => $fromAddress,
-                    'to_address' => $toAddress,
-                    'amount' => $amount,
-                    'fee' => isset($tx['ret'][0]['fee'])
-                        ? self::sunToTrx((string) $tx['ret'][0]['fee'])
-                        : null,
-                    'block_number' => $tx['blockNumber'] ?? null,
-                    'mined_at' => isset($tx['block_timestamp'])
-                        ? Carbon::createFromTimestampMs($tx['block_timestamp'])
-                        : null,
-                ],
-            );
-            $count++;
         }
 
         Log::info('TronGridHistoryProvider: stored transactions', [
@@ -91,6 +57,60 @@ class TronGridHistoryProvider implements WalletHistoryProvider
         ]);
 
         return $count;
+    }
+
+    public function fetchTransactions(Wallet $wallet, Carbon $from, Carbon $to): int
+    {
+        $url = self::BASE_URL . '/' . $wallet->address . '/transactions';
+
+        $headers = [];
+        if ($this->apiKey) {
+            $headers['TRON-PRO-API-KEY'] = $this->apiKey;
+        }
+
+        $fingerprint = null;
+        $total = 0;
+        $maxPages = 20;
+
+        for ($page = 0; $page < $maxPages; $page++) {
+            $params = [
+                'limit' => 200,
+                'only_confirmed' => 'true',
+                'order_by' => 'block_timestamp,desc',
+                'min_timestamp' => $from->startOfDay()->getTimestampMs(),
+                'max_timestamp' => $to->endOfDay()->getTimestampMs(),
+            ];
+            if ($fingerprint) {
+                $params['fingerprint'] = $fingerprint;
+            }
+
+            $response = $this->api->get($url, $params, $headers);
+            $transactions = $response->json('data') ?? [];
+
+            if (empty($transactions)) {
+                break;
+            }
+
+            foreach ($transactions as $tx) {
+                if ($this->upsertTransaction($wallet, $tx)) {
+                    $total++;
+                }
+            }
+
+            $fingerprint = $response->json('meta.fingerprint');
+            if (! $fingerprint) {
+                break;
+            }
+        }
+
+        Log::info('TronGridHistoryProvider: fetched transactions for date range', [
+            'wallet_id' => $wallet->id,
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'count' => $total,
+        ]);
+
+        return $total;
     }
 
     public function syncBalance(Wallet $wallet): void
@@ -118,6 +138,47 @@ class TronGridHistoryProvider implements WalletHistoryProvider
         }
 
         $wallet->update(['balance_usd' => $balanceUsd]);
+    }
+
+    private function upsertTransaction(Wallet $wallet, array $tx): bool
+    {
+        $txId = $tx['txID'] ?? null;
+        if (! $txId) {
+            return false;
+        }
+
+        $contract = $tx['raw_data']['contract'][0] ?? [];
+        $contractType = $contract['type'] ?? '';
+        $paramValue = $contract['parameter']['value'] ?? [];
+
+        $fromAddress = '';
+        $toAddress = '';
+        $amount = '0';
+
+        if ($contractType === 'TransferContract') {
+            $fromAddress = strtolower($paramValue['owner_address'] ?? '');
+            $toAddress = strtolower($paramValue['to_address'] ?? '');
+            $amount = self::sunToTrx((string) ($paramValue['amount'] ?? '0'));
+        }
+
+        Transaction::updateOrCreate(
+            ['hash' => $txId],
+            [
+                'wallet_id' => $wallet->id,
+                'from_address' => $fromAddress,
+                'to_address' => $toAddress,
+                'amount' => $amount,
+                'fee' => isset($tx['ret'][0]['fee'])
+                    ? self::sunToTrx((string) $tx['ret'][0]['fee'])
+                    : null,
+                'block_number' => $tx['blockNumber'] ?? null,
+                'mined_at' => isset($tx['block_timestamp'])
+                    ? Carbon::createFromTimestampMs($tx['block_timestamp'])
+                    : null,
+            ],
+        );
+
+        return true;
     }
 
     private static function sunToTrx(string $sun): string

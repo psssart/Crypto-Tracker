@@ -3,6 +3,7 @@
 namespace App\Contracts;
 
 use App\Models\Wallet;
+use Illuminate\Support\Carbon;
 
 interface WalletHistoryProvider
 {
@@ -17,6 +18,14 @@ interface WalletHistoryProvider
      * @return int  Number of transactions stored/updated.
      */
     public function syncTransactions(Wallet $wallet): int;
+
+    /**
+     * Fetch and store transactions for the wallet within a date range.
+     * Paginates through results as needed.
+     *
+     * @return int  Number of transactions stored/updated.
+     */
+    public function fetchTransactions(Wallet $wallet, Carbon $from, Carbon $to): int;
 
     /**
      * Fetch and update the wallet's native balance (and USD estimate).

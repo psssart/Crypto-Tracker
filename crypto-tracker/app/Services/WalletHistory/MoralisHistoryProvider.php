@@ -55,20 +55,7 @@ class MoralisHistoryProvider implements WalletHistoryProvider
         $results = $response->json('result') ?? [];
 
         foreach ($results as $tx) {
-            Transaction::updateOrCreate(
-                ['hash' => $tx['hash']],
-                [
-                    'wallet_id' => $wallet->id,
-                    'from_address' => strtolower($tx['from_address'] ?? ''),
-                    'to_address' => strtolower($tx['to_address'] ?? ''),
-                    'amount' => self::weiToEther($tx['value'] ?? '0'),
-                    'fee' => self::calculateFee($tx),
-                    'block_number' => $tx['block_number'] ?? null,
-                    'mined_at' => isset($tx['block_timestamp'])
-                        ? Carbon::parse($tx['block_timestamp'])
-                        : null,
-                ],
-            );
+            $this->upsertTransaction($wallet, $tx);
         }
 
         Log::info('MoralisHistoryProvider: stored transactions', [
@@ -77,6 +64,58 @@ class MoralisHistoryProvider implements WalletHistoryProvider
         ]);
 
         return count($results);
+    }
+
+    public function fetchTransactions(Wallet $wallet, Carbon $from, Carbon $to): int
+    {
+        $chain = self::CHAIN_MAP[$wallet->network->slug];
+        $headers = ['X-API-Key' => $this->apiKey];
+        $cursor = null;
+        $total = 0;
+        $maxPages = 20;
+
+        for ($page = 0; $page < $maxPages; $page++) {
+            $params = [
+                'chain' => $chain,
+                'order' => 'desc',
+                'limit' => 100,
+                'from_date' => $from->toIso8601String(),
+                'to_date' => $to->endOfDay()->toIso8601String(),
+            ];
+            if ($cursor) {
+                $params['cursor'] = $cursor;
+            }
+
+            $response = $this->api->get(
+                self::BASE_URL . '/' . $wallet->address,
+                $params,
+                $headers,
+            );
+
+            $results = $response->json('result') ?? [];
+            if (empty($results)) {
+                break;
+            }
+
+            foreach ($results as $tx) {
+                $this->upsertTransaction($wallet, $tx);
+            }
+
+            $total += count($results);
+            $cursor = $response->json('cursor');
+            if (! $cursor) {
+                break;
+            }
+        }
+
+        Log::info('MoralisHistoryProvider: fetched transactions for date range', [
+            'wallet_id' => $wallet->id,
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'count' => $total,
+        ]);
+
+        return $total;
     }
 
     public function syncBalance(Wallet $wallet): void
@@ -107,6 +146,24 @@ class MoralisHistoryProvider implements WalletHistoryProvider
         }
 
         $wallet->update(['balance_usd' => $balanceUsd]);
+    }
+
+    private function upsertTransaction(Wallet $wallet, array $tx): void
+    {
+        Transaction::updateOrCreate(
+            ['hash' => $tx['hash']],
+            [
+                'wallet_id' => $wallet->id,
+                'from_address' => strtolower($tx['from_address'] ?? ''),
+                'to_address' => strtolower($tx['to_address'] ?? ''),
+                'amount' => self::weiToEther($tx['value'] ?? '0'),
+                'fee' => self::calculateFee($tx),
+                'block_number' => $tx['block_number'] ?? null,
+                'mined_at' => isset($tx['block_timestamp'])
+                    ? Carbon::parse($tx['block_timestamp'])
+                    : null,
+            ],
+        );
     }
 
     private static function weiToEther(string $wei): string

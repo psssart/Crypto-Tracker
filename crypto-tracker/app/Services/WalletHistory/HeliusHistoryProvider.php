@@ -41,48 +41,9 @@ class HeliusHistoryProvider implements WalletHistoryProvider
 
         $count = 0;
         foreach ($transactions as $tx) {
-            $signature = $tx['signature'] ?? null;
-            if (!$signature) {
-                continue;
+            if ($this->upsertTransaction($wallet, $tx)) {
+                $count++;
             }
-
-            // Parse native SOL transfers from Helius Enhanced Transactions
-            $nativeTransfers = $tx['nativeTransfers'] ?? [];
-            $amount = '0';
-            $fromAddress = '';
-            $toAddress = '';
-
-            $walletAddr = strtolower($wallet->address);
-
-            foreach ($nativeTransfers as $transfer) {
-                $from = strtolower($transfer['fromUserAccount'] ?? '');
-                $to = strtolower($transfer['toUserAccount'] ?? '');
-
-                if ($from === $walletAddr || $to === $walletAddr) {
-                    $amount = self::lamportToSol((string) ($transfer['amount'] ?? '0'));
-                    $fromAddress = $from;
-                    $toAddress = $to;
-                    break;
-                }
-            }
-
-            $fee = isset($tx['fee']) ? self::lamportToSol((string) $tx['fee']) : null;
-
-            Transaction::updateOrCreate(
-                ['hash' => $signature],
-                [
-                    'wallet_id' => $wallet->id,
-                    'from_address' => $fromAddress,
-                    'to_address' => $toAddress,
-                    'amount' => $amount,
-                    'fee' => $fee,
-                    'block_number' => $tx['slot'] ?? null,
-                    'mined_at' => isset($tx['timestamp'])
-                        ? Carbon::createFromTimestamp($tx['timestamp'])
-                        : null,
-                ],
-            );
-            $count++;
         }
 
         Log::info('HeliusHistoryProvider: stored transactions', [
@@ -91,6 +52,73 @@ class HeliusHistoryProvider implements WalletHistoryProvider
         ]);
 
         return $count;
+    }
+
+    public function fetchTransactions(Wallet $wallet, Carbon $from, Carbon $to): int
+    {
+        $url = self::TX_BASE_URL . '/' . $wallet->address . '/transactions';
+        $fromTs = $from->startOfDay()->timestamp;
+        $toTs = $to->endOfDay()->timestamp;
+        $before = null;
+        $total = 0;
+        $maxPages = 20;
+
+        for ($page = 0; $page < $maxPages; $page++) {
+            $params = [
+                'api-key' => $this->apiKey,
+                'limit' => 100,
+            ];
+            if ($before) {
+                $params['before'] = $before;
+            }
+
+            $response = $this->api->get($url, $params);
+            $transactions = $response->json() ?? [];
+
+            if (empty($transactions)) {
+                break;
+            }
+
+            $pastRange = false;
+            foreach ($transactions as $tx) {
+                $ts = $tx['timestamp'] ?? null;
+
+                // Skip transactions after our range
+                if ($ts !== null && $ts > $toTs) {
+                    continue;
+                }
+
+                // Stop if we've gone before our range
+                if ($ts !== null && $ts < $fromTs) {
+                    $pastRange = true;
+                    break;
+                }
+
+                if ($this->upsertTransaction($wallet, $tx)) {
+                    $total++;
+                }
+            }
+
+            if ($pastRange) {
+                break;
+            }
+
+            // Use last signature for pagination
+            $lastTx = end($transactions);
+            $before = $lastTx['signature'] ?? null;
+            if (! $before) {
+                break;
+            }
+        }
+
+        Log::info('HeliusHistoryProvider: fetched transactions for date range', [
+            'wallet_id' => $wallet->id,
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'count' => $total,
+        ]);
+
+        return $total;
     }
 
     public function syncBalance(Wallet $wallet): void
@@ -118,6 +146,51 @@ class HeliusHistoryProvider implements WalletHistoryProvider
         }
 
         $wallet->update(['balance_usd' => $balanceUsd]);
+    }
+
+    private function upsertTransaction(Wallet $wallet, array $tx): bool
+    {
+        $signature = $tx['signature'] ?? null;
+        if (! $signature) {
+            return false;
+        }
+
+        $nativeTransfers = $tx['nativeTransfers'] ?? [];
+        $amount = '0';
+        $fromAddress = '';
+        $toAddress = '';
+        $walletAddr = strtolower($wallet->address);
+
+        foreach ($nativeTransfers as $transfer) {
+            $from = strtolower($transfer['fromUserAccount'] ?? '');
+            $to = strtolower($transfer['toUserAccount'] ?? '');
+
+            if ($from === $walletAddr || $to === $walletAddr) {
+                $amount = self::lamportToSol((string) ($transfer['amount'] ?? '0'));
+                $fromAddress = $from;
+                $toAddress = $to;
+                break;
+            }
+        }
+
+        $fee = isset($tx['fee']) ? self::lamportToSol((string) $tx['fee']) : null;
+
+        Transaction::updateOrCreate(
+            ['hash' => $signature],
+            [
+                'wallet_id' => $wallet->id,
+                'from_address' => $fromAddress,
+                'to_address' => $toAddress,
+                'amount' => $amount,
+                'fee' => $fee,
+                'block_number' => $tx['slot'] ?? null,
+                'mined_at' => isset($tx['timestamp'])
+                    ? Carbon::createFromTimestamp($tx['timestamp'])
+                    : null,
+            ],
+        );
+
+        return true;
     }
 
     private static function lamportToSol(string $lamports): string
