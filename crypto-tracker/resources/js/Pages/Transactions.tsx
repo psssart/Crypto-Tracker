@@ -200,7 +200,7 @@ export default function Transactions({
                     const isOwn = tx.from_address?.toLowerCase() === addr.toLowerCase();
                     return (
                         <span
-                            className={`font-mono ${isOwn ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}
+                            className={`font-mono ${isOwn ? 'font-bold text-black dark:text-white' : 'text-gray-400 dark:text-gray-400'}`}
                         >
                             {truncateAddress(tx.from_address)}
                         </span>
@@ -218,7 +218,7 @@ export default function Transactions({
                     const isOwn = tx.to_address?.toLowerCase() === addr.toLowerCase();
                     return (
                         <span
-                            className={`font-mono ${isOwn ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}
+                            className={`font-mono ${isOwn ? 'font-bold text-black dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}
                         >
                             {truncateAddress(tx.to_address)}
                         </span>

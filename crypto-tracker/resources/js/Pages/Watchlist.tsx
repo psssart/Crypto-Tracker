@@ -673,7 +673,7 @@ export default function Watchlist({ wallets, networks, hasTelegramLinked, nonEvm
                                                 {!isAddNetworkNonEvm && addForm.data.is_notified && (
                                                     <div className="flex flex-wrap items-end gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
                                                         <div className="w-full">
-                                                            <h6 className="text-sm">Notification settings</h6>
+                                                            <h6 className="text-sm text-gray-600 dark:text-gray-400">Notification settings</h6>
                                                         </div>
                                                         <div className="w-full sm:w-36">
                                                             <label
@@ -914,7 +914,7 @@ export default function Watchlist({ wallets, networks, hasTelegramLinked, nonEvm
                                             {!isEditNetworkNonEvm && editForm.data.is_notified && (
                                                 <div className="flex flex-wrap items-end gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
                                                     <div className="w-full">
-                                                        <h6 className="text-sm">Notification settings</h6>
+                                                        <h6 className="text-sm text-gray-600 dark:text-gray-400">Notification settings</h6>
                                                     </div>
                                                     <div className="w-full sm:w-36">
                                                         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">

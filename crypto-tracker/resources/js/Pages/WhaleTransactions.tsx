@@ -2,7 +2,7 @@ import DataTable, { Column, MobileRenderHelpers } from '@/Components/DataTable';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { Network, Transaction } from '@/types';
 import { Head, Link } from '@inertiajs/react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 interface WhaleWallet {
     id: number;
@@ -19,6 +19,18 @@ interface Props {
 
 function truncateAddress(address: string): string {
     return address.slice(0, 6) + '...' + address.slice(-4);
+}
+
+function copyToClipboard(text: string, setCopied: (addr: string) => void) {
+    navigator.clipboard.writeText(text);
+    setCopied(text);
+    setTimeout(() => setCopied(''), 1500);
+}
+
+function explorerAddressUrl(network: Network, address: string): string | null {
+    if (!network.explorer_url) return null;
+    if (network.slug === 'tron') return `${network.explorer_url}/#/address/${address}`;
+    return `${network.explorer_url}/address/${address}`;
 }
 
 function truncateHash(hash: string): string {
@@ -44,15 +56,15 @@ function getDirection(tx: Transaction, walletAddress: string): Direction {
 }
 
 const dirBadgeStyles: Record<Direction, string> = {
-    In: 'bg-green-500/20 text-green-300 border-green-500/30',
-    Out: 'bg-red-500/20 text-red-300 border-red-500/30',
-    Self: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
+    In: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    Out: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    Self: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
 };
 
 function DirectionBadge({ direction }: { direction: Direction }) {
     return (
         <span
-            className={`inline-block rounded border px-2 py-0.5 text-xs font-medium ${dirBadgeStyles[direction]}`}
+            className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${dirBadgeStyles[direction]}`}
         >
             {direction}
         </span>
@@ -64,6 +76,8 @@ export default function WhaleTransactions({ wallet, transactions }: Props) {
     const explorerBase = wallet.network.explorer_url;
     const symbol = wallet.network.currency_symbol;
     const label = wallet.metadata?.label;
+    const explorer = explorerAddressUrl(wallet.network, addr);
+    const [copiedAddr, setCopiedAddr] = useState('');
 
     const columns = useMemo<Column<Transaction>[]>(
         () => [
@@ -83,12 +97,14 @@ export default function WhaleTransactions({ wallet, transactions }: Props) {
                             href={`${explorerBase}/tx/${tx.hash}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-mono text-indigo-400 hover:text-indigo-300"
+                            className="font-mono text-indigo-600 hover:text-indigo-800 dark:text-indigo-400"
                         >
                             {truncateHash(tx.hash)}
                         </a>
                     ) : (
-                        <span className="font-mono text-white/70">{truncateHash(tx.hash)}</span>
+                        <span className="font-mono text-gray-700 dark:text-gray-300">
+                            {truncateHash(tx.hash)}
+                        </span>
                     ),
             },
             {
@@ -102,7 +118,7 @@ export default function WhaleTransactions({ wallet, transactions }: Props) {
                     const isOwn = tx.from_address?.toLowerCase() === addr.toLowerCase();
                     return (
                         <span
-                            className={`font-mono ${isOwn ? 'font-bold text-white' : 'text-white/60'}`}
+                            className={`font-mono ${isOwn ? 'font-bold text-black dark:text-white' : 'text-gray-400 dark:text-gray-400'}`}
                         >
                             {truncateAddress(tx.from_address)}
                         </span>
@@ -120,7 +136,7 @@ export default function WhaleTransactions({ wallet, transactions }: Props) {
                     const isOwn = tx.to_address?.toLowerCase() === addr.toLowerCase();
                     return (
                         <span
-                            className={`font-mono ${isOwn ? 'font-bold text-white' : 'text-white/60'}`}
+                            className={`font-mono ${isOwn ? 'font-bold text-black dark:text-white' : 'text-gray-400 dark:text-gray-400'}`}
                         >
                             {truncateAddress(tx.to_address)}
                         </span>
@@ -135,9 +151,9 @@ export default function WhaleTransactions({ wallet, transactions }: Props) {
                 headerClassName: 'text-right',
                 cellClassName: 'text-right',
                 render: (tx) => (
-                    <span className="text-white">
+                    <span className="text-gray-900 dark:text-white">
                         {formatAmount(tx.amount)}{' '}
-                        <span className="text-white/50">{symbol}</span>
+                        <span className="text-gray-500">{symbol}</span>
                     </span>
                 ),
             },
@@ -149,7 +165,7 @@ export default function WhaleTransactions({ wallet, transactions }: Props) {
                 headerClassName: 'text-right',
                 cellClassName: 'text-right',
                 render: (tx) => (
-                    <span className="text-white/50">
+                    <span className="text-gray-500 dark:text-gray-400">
                         {tx.fee ? formatAmount(tx.fee) : '\u2014'}
                     </span>
                 ),
@@ -162,7 +178,7 @@ export default function WhaleTransactions({ wallet, transactions }: Props) {
                 headerClassName: 'text-right',
                 cellClassName: 'text-right',
                 render: (tx) => (
-                    <span className="text-white/50">
+                    <span className="text-gray-500 dark:text-gray-400">
                         {tx.mined_at ? new Date(tx.mined_at).toLocaleString() : 'Pending'}
                     </span>
                 ),
@@ -178,10 +194,10 @@ export default function WhaleTransactions({ wallet, transactions }: Props) {
             const toFiltered = isCellFiltered('to', tx.to_address);
 
             return (
-                <div className="rounded-lg border border-white/10 bg-black/40 p-4 backdrop-blur">
+                <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                     <div className="flex items-center justify-between">
                         <DirectionBadge direction={direction} />
-                        <span className="text-xs text-white/50">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
                             {tx.mined_at ? new Date(tx.mined_at).toLocaleString() : 'Pending'}
                         </span>
                     </div>
@@ -191,15 +207,17 @@ export default function WhaleTransactions({ wallet, transactions }: Props) {
                                 href={`${explorerBase}/tx/${tx.hash}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-indigo-400"
+                                className="text-indigo-600 dark:text-indigo-400"
                             >
                                 {truncateHash(tx.hash)}
                             </a>
                         ) : (
-                            <span className="text-white/70">{truncateHash(tx.hash)}</span>
+                            <span className="text-gray-700 dark:text-gray-300">
+                                {truncateHash(tx.hash)}
+                            </span>
                         )}
                     </div>
-                    <div className="mt-2 space-y-1 text-xs text-white/50">
+                    <div className="mt-2 space-y-1 text-xs text-gray-500 dark:text-gray-400">
                         <div className="flex items-center gap-1">
                             From:{' '}
                             <span className="font-mono">
@@ -209,7 +227,9 @@ export default function WhaleTransactions({ wallet, transactions }: Props) {
                                 type="button"
                                 onClick={() => cellFilter('from', tx.from_address)}
                                 className={`rounded p-0.5 ${
-                                    fromFiltered ? 'text-indigo-400' : 'text-white/40'
+                                    fromFiltered
+                                        ? 'text-indigo-600 dark:text-indigo-400'
+                                        : 'text-gray-400'
                                 }`}
                             >
                                 <svg
@@ -234,7 +254,9 @@ export default function WhaleTransactions({ wallet, transactions }: Props) {
                                 type="button"
                                 onClick={() => cellFilter('to', tx.to_address)}
                                 className={`rounded p-0.5 ${
-                                    toFiltered ? 'text-indigo-400' : 'text-white/40'
+                                    toFiltered
+                                        ? 'text-indigo-600 dark:text-indigo-400'
+                                        : 'text-gray-400'
                                 }`}
                             >
                                 <svg
@@ -254,11 +276,11 @@ export default function WhaleTransactions({ wallet, transactions }: Props) {
                         </div>
                     </div>
                     <div className="mt-2 flex items-center justify-between">
-                        <span className="text-sm font-semibold text-white">
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
                             {formatAmount(tx.amount)} {symbol}
                         </span>
                         {tx.fee && (
-                            <span className="text-xs text-white/50">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
                                 Fee: {formatAmount(tx.fee)}
                             </span>
                         )}
@@ -278,7 +300,7 @@ export default function WhaleTransactions({ wallet, transactions }: Props) {
                     <div>
                         <Link
                             href={route('whales')}
-                            className="inline-flex items-center gap-1.5 text-sm text-white/60 transition hover:text-white"
+                            className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                         >
                             <svg
                                 className="h-4 w-4"
@@ -299,19 +321,79 @@ export default function WhaleTransactions({ wallet, transactions }: Props) {
                             {label || truncateAddress(addr)}
                         </h1>
                         <div className="mt-1 flex items-center gap-2">
-                            <span className="rounded border border-white/10 bg-white/5 px-2 py-0.5 text-xs font-medium text-white/70">
+                            <span className="rounded border border-gray-200 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
                                 {symbol}
                             </span>
-                            <code className="text-sm text-white/50">{truncateAddress(addr)}</code>
+                            <code className="text-sm text-gray-500 dark:text-gray-400">
+                                {truncateAddress(addr)}
+                            </code>
+                            <button
+                                onClick={() => copyToClipboard(addr, setCopiedAddr)}
+                                className="text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-200"
+                                title="Copy address"
+                            >
+                                {copiedAddr === addr ? (
+                                    <svg
+                                        className="h-4 w-4 text-green-500"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M5 13l4 4L19 7"
+                                        />
+                                    </svg>
+                                ) : (
+                                    <svg
+                                        className="h-4 w-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                        />
+                                    </svg>
+                                )}
+                            </button>
+                            {explorer && (
+                                <a
+                                    href={explorer}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-200"
+                                    title="View on explorer"
+                                >
+                                    <svg
+                                        className="h-4 w-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                        />
+                                    </svg>
+                                </a>
+                            )}
                         </div>
                     </div>
-                    <div className="text-right text-sm text-white/50">
+                    <div className="text-right text-sm text-gray-500 dark:text-gray-400">
                         Last {transactions.length} transactions
                     </div>
                 </div>
 
                 {transactions.length === 0 ? (
-                    <div className="py-20 text-center text-white/50">
+                    <div className="py-20 text-center text-gray-500 dark:text-gray-400">
                         No transactions found for this wallet.
                     </div>
                 ) : (

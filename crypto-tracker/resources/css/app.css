@@ -6,6 +6,9 @@
     /* light-mode defaults */
     --icon-primary:   #374151; /* gray-700 */
     --icon-secondary: #6B7280; /* gray-500 */
+    select, input[type="password"], input[type="email"], input[type="text"], input[type="number"], textarea {
+        color: var(--icon-primary);
+    }
 }
 
 @media (prefers-color-scheme: dark) {
