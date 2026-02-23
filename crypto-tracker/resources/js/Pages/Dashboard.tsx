@@ -38,6 +38,7 @@ type TrackedAddress = {
 };
 
 type Props = {
+    auth: { user: any; };
     supportedNetworkMap: Record<string, number>;
     trackedAddresses: TrackedAddress[];
 };
@@ -53,7 +54,7 @@ function trackingKey(slug: string, address: string) {
     return `${slug}:${address.toLowerCase()}`;
 }
 
-export default function Dashboard({ supportedNetworkMap, trackedAddresses }: Props) {
+export default function Dashboard({ auth, supportedNetworkMap, trackedAddresses }: Props) {
     const [profiles, setProfiles] = useState<ProfilesByChain>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -90,6 +91,11 @@ export default function Dashboard({ supportedNetworkMap, trackedAddresses }: Pro
     };
 
     const handleTrack = (chainId: string, tokenAddress: string) => {
+        if (!auth.user) {
+          router.visit(route('register'));
+          return;
+        }
+
         const networkId = supportedNetworkMap[chainId];
         if (!networkId) return;
 
