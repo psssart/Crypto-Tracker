@@ -1,10 +1,11 @@
+import BarChart from '@/Components/Charts/BarChart';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import DataTable, { Column, MobileRenderHelpers } from '@/Components/DataTable';
 import DateRangeSelect from '@/Components/DateRangeSelect';
 import { flashError, flashInfo } from '@/Components/FlashMessages';
 import { Head, Link, router } from '@inertiajs/react';
 import { Network, Transaction } from '@/types';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 interface WalletOption {
     id: number;
@@ -63,6 +64,181 @@ function DirectionBadge({ direction }: { direction: Direction }) {
         </span>
     );
 }
+
+type BucketSize = 'minute' | 'hour' | 'day' | 'week' | 'month';
+
+function chooseBucketSize(transactions: Transaction[]): BucketSize {
+    const timestamps = transactions
+        .filter((tx) => tx.mined_at)
+        .map((tx) => new Date(tx.mined_at!).getTime());
+    if (timestamps.length < 2) return 'day';
+    const min = Math.min(...timestamps);
+    const max = Math.max(...timestamps);
+    const spanHours = (max - min) / (1000 * 60 * 60);
+    if (spanHours <= 6) return 'minute';
+    if (spanHours <= 72) return 'hour';
+    if (spanHours <= 60 * 24) return 'day';
+    if (spanHours <= 365 * 24) return 'week';
+    return 'month';
+}
+
+function toBucketKey(date: Date, size: BucketSize): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const h = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    switch (size) {
+        case 'minute':
+            return `${y}-${m}-${d}T${h}:${min}`;
+        case 'hour':
+            return `${y}-${m}-${d}T${h}`;
+        case 'day':
+            return `${y}-${m}-${d}`;
+        case 'week': {
+            const day = date.getDay();
+            const weekStart = new Date(date);
+            weekStart.setDate(date.getDate() - day);
+            const wy = weekStart.getFullYear();
+            const wm = String(weekStart.getMonth() + 1).padStart(2, '0');
+            const wd = String(weekStart.getDate()).padStart(2, '0');
+            return `${wy}-${wm}-${wd}`;
+        }
+        case 'month':
+            return `${y}-${m}`;
+    }
+}
+
+const shortMonth = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function formatBucketLabel(key: string, size: BucketSize): string {
+    switch (size) {
+        case 'minute':
+            return key.slice(11); // HH:mm
+        case 'hour': {
+            const dt = new Date(key + ':00:00');
+            return `${shortMonth[dt.getMonth()]} ${dt.getDate()} ${String(dt.getHours()).padStart(2, '0')}:00`;
+        }
+        case 'day':
+        case 'week': {
+            const dt = new Date(key + 'T00:00:00');
+            return `${shortMonth[dt.getMonth()]} ${dt.getDate()}`;
+        }
+        case 'month': {
+            const [y, m] = key.split('-');
+            return `${shortMonth[parseInt(m, 10) - 1]} ${y}`;
+        }
+    }
+}
+
+interface BucketTxDetail {
+    from: string;
+    to: string;
+    amount: string;
+    fee: string | null;
+    direction: Direction;
+}
+
+interface ChartBucket {
+    label: string;
+    inAmount: number;
+    outAmount: number;
+    selfAmount: number;
+    details: BucketTxDetail[];
+}
+
+function bucketTransactions(transactions: Transaction[], walletAddress: string): ChartBucket[] {
+    const timestamped = transactions.filter((tx) => tx.mined_at);
+    if (timestamped.length === 0) return [];
+
+    const size = chooseBucketSize(timestamped);
+    const bucketMap = new Map<string, { in: number; out: number; self: number; details: BucketTxDetail[] }>();
+
+    for (const tx of timestamped) {
+        const date = new Date(tx.mined_at!);
+        const key = toBucketKey(date, size);
+        let bucket = bucketMap.get(key);
+        if (!bucket) {
+            bucket = { in: 0, out: 0, self: 0, details: [] };
+            bucketMap.set(key, bucket);
+        }
+        const dir = getDirection(tx, walletAddress);
+        const amount = parseFloat(tx.amount);
+        if (dir === 'In') bucket.in += amount;
+        else if (dir === 'Out') bucket.out += amount;
+        else bucket.self += amount;
+        bucket.details.push({
+            from: tx.from_address,
+            to: tx.to_address,
+            amount: tx.amount,
+            fee: tx.fee,
+            direction: dir,
+        });
+    }
+
+    const sortedKeys = Array.from(bucketMap.keys()).sort();
+    return sortedKeys.map((key) => {
+        const b = bucketMap.get(key)!;
+        return {
+            label: formatBucketLabel(key, size),
+            inAmount: b.in,
+            outAmount: b.out > 0 ? -b.out : 0,
+            selfAmount: b.self,
+            details: b.details,
+        };
+    });
+}
+
+function formatCompactAmount(value: number): string {
+    const abs = Math.abs(value);
+    if (abs === 0) return '0';
+    if (abs < 0.0001) return value.toExponential(1);
+    if (abs < 1) return value.toFixed(4);
+    return new Intl.NumberFormat(undefined, {
+        notation: 'compact',
+        maximumFractionDigits: 2,
+    }).format(value);
+}
+
+function TransactionTooltip({ active, payload, label }: any) {
+    if (!active || !payload?.length) return null;
+    const details: BucketTxDetail[] = payload[0]?.payload?.details ?? [];
+
+    const inTotal = payload.find((p: any) => p.dataKey === 'inAmount')?.value ?? 0;
+    const outTotal = payload.find((p: any) => p.dataKey === 'outAmount')?.value ?? 0;
+    const selfTotal = payload.find((p: any) => p.dataKey === 'selfAmount')?.value ?? 0;
+
+    const dirGroups: { label: string; color: string; total: number; txs: BucketTxDetail[] }[] = [];
+    if (inTotal > 0) dirGroups.push({ label: 'In', color: '#22c55e', total: inTotal, txs: details.filter((d) => d.direction === 'In') });
+    if (outTotal < 0) dirGroups.push({ label: 'Out', color: '#ef4444', total: Math.abs(outTotal), txs: details.filter((d) => d.direction === 'Out') });
+    if (selfTotal > 0) dirGroups.push({ label: 'Self', color: '#6b7280', total: selfTotal, txs: details.filter((d) => d.direction === 'Self') });
+
+    return (
+        <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+            <p className="mb-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200">{label}</p>
+            {dirGroups.map((g) => (
+                <div key={g.label} className="mb-1.5 last:mb-0">
+                    <p className="text-xs font-medium" style={{ color: g.color }}>
+                        {g.label}: {formatCompactAmount(g.total)}
+                    </p>
+                    {g.txs.slice(0, 3).map((tx, i) => (
+                        <p key={i} className="pl-2 text-[11px] text-gray-500 dark:text-gray-400">
+                            {truncateAddress(tx.from)} → {truncateAddress(tx.to)}: {formatAmount(tx.amount)}
+                            {tx.fee && ` (fee: ${formatAmount(tx.fee)})`}
+                        </p>
+                    ))}
+                    {g.txs.length > 3 && (
+                        <p className="pl-2 text-[11px] italic text-gray-400 dark:text-gray-500">
+                            and {g.txs.length - 3} more...
+                        </p>
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+}
+
+const CHART_TYPES = [{ value: 'bar', label: 'Bar Chart' }];
 
 const COOLDOWN_SECONDS = 60;
 
@@ -266,6 +442,37 @@ export default function Transactions({
                 ),
             },
         ];
+    }, [activeWallet]);
+
+    const renderViz = useMemo<
+        ((sortedData: Transaction[], chartType: string) => ReactNode) | undefined
+    >(() => {
+        if (!activeWallet) return undefined;
+        return (sortedData: Transaction[], _chartType: string) => {
+            const chartData = bucketTransactions(sortedData, activeWallet.address);
+            if (chartData.length === 0) {
+                return (
+                    <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                        No timestamped transactions to chart.
+                    </p>
+                );
+            }
+            return (
+                <BarChart
+                    data={chartData}
+                    xAxisKey="label"
+                    series={[
+                        { dataKey: 'inAmount', name: 'In', color: '#22c55e', stackId: 'stack' },
+                        { dataKey: 'outAmount', name: 'Out', color: '#ef4444', stackId: 'stack' },
+                        { dataKey: 'selfAmount', name: 'Self', color: '#6b7280', stackId: 'self' },
+                    ]}
+                    stackOffset="sign"
+                    yAxisFormatter={formatCompactAmount}
+                    tooltipContent={TransactionTooltip}
+                    xAxisAngle={chartData.length > 15 ? -45 : 0}
+                />
+            );
+        };
     }, [activeWallet]);
 
     const renderMobileCard = useMemo(() => {
@@ -485,6 +692,8 @@ export default function Transactions({
                                 data={transactions ?? []}
                                 rowKey={(tx) => tx.id}
                                 mobileRender={renderMobileCard}
+                                renderVisualization={renderViz}
+                                chartTypes={CHART_TYPES}
                             />
                         </>
                     )}

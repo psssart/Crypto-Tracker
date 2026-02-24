@@ -47,6 +47,7 @@
         "@mui/material": "^7.3.8",
         "@mui/x-date-pickers": "^8.27.0",
         "dayjs": "^1.11.19",
-        "lightweight-charts": "^5.0.9"
+        "lightweight-charts": "^5.0.9",
+        "recharts": "^3.7.0"
     }
 }

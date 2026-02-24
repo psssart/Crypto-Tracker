@@ -1,5 +1,10 @@
 import { memo, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+export interface ChartTypeOption {
+    value: string;
+    label: string;
+}
+
 type SortDirection = 'asc' | 'desc';
 
 export interface Column<T> {
@@ -28,6 +33,8 @@ interface DataTableProps<T> {
     defaultPerPage?: number;
     perPageOptions?: number[];
     mobileRender?: (row: T, helpers: MobileRenderHelpers) => ReactNode;
+    renderVisualization?: (sortedData: T[], chartType: string) => ReactNode;
+    chartTypes?: ChartTypeOption[];
 }
 
 function FilterDropdown({
@@ -140,6 +147,8 @@ export default function DataTable<T>({
     defaultPerPage = 25,
     perPageOptions = [10, 25, 50, 100],
     mobileRender,
+    renderVisualization,
+    chartTypes,
 }: DataTableProps<T>) {
     const [sortKey, setSortKey] = useState<string | null>(null);
     const [sortDir, setSortDir] = useState<SortDirection>('desc');
@@ -147,6 +156,8 @@ export default function DataTable<T>({
     const [perPage, setPerPage] = useState(defaultPerPage);
     const [currentPage, setCurrentPage] = useState(1);
     const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
+    const [chartVisible, setChartVisible] = useState(false);
+    const [chartType, setChartType] = useState(chartTypes?.[0]?.value ?? 'bar');
 
     // Reset page when data, filters, sort, or perPage change
     useEffect(() => setCurrentPage(1), [data, filters, sortKey, sortDir, perPage]);
@@ -434,6 +445,48 @@ export default function DataTable<T>({
                             </option>
                         ))}
                     </select>
+                    {renderVisualization && (
+                        <>
+                            <button
+                                type="button"
+                                onClick={() => setChartVisible((v) => !v)}
+                                className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-sm font-medium transition ${
+                                    chartVisible
+                                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-950 dark:text-indigo-300'
+                                        : 'border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800'
+                                }`}
+                                title={chartVisible ? 'Hide chart' : 'Show chart'}
+                            >
+                                <svg
+                                    className="h-4 w-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                                    />
+                                </svg>
+                                <span className="hidden sm:inline">Visualize</span>
+                            </button>
+                            {chartVisible && chartTypes && chartTypes.length > 1 && (
+                                <select
+                                    value={chartType}
+                                    onChange={(e) => setChartType(e.target.value)}
+                                    className="rounded-md border-gray-300 py-1 pl-2 pr-7 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                >
+                                    {chartTypes.map((ct) => (
+                                        <option key={ct.value} value={ct.value}>
+                                            {ct.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -533,6 +586,18 @@ export default function DataTable<T>({
                                 </div>
                             ))}
                         </div>
+                    )}
+                </div>
+            )}
+
+            {chartVisible && renderVisualization && (
+                <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+                    {sortedData.length > 0 ? (
+                        renderVisualization(sortedData, chartType)
+                    ) : (
+                        <p className="py-8 text-center text-gray-500 dark:text-gray-400">
+                            No data to visualize.
+                        </p>
                     )}
                 </div>
             )}
