@@ -23,3 +23,7 @@
     --icon-primary:   #D1D5DB; /* gray-300 */
     --icon-secondary: #9CA3AF; /* gray-400 */
 }
+
+.recharts-responsive-container svg:focus {
+    outline: none;
+}

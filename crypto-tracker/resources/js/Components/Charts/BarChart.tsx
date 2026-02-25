@@ -1,5 +1,5 @@
 import { useTheme } from '@/lib/theme-provider';
-import { ReactNode, useMemo } from 'react';
+import { ReactNode, useCallback, useMemo } from 'react';
 import {
     Bar,
     BarChart as RechartsBarChart,
@@ -58,6 +58,37 @@ export default function BarChart({
 
     const needsBottomMargin = xAxisAngle !== 0;
 
+    const measureText = useCallback((text: string, fontSize: number): number => {
+        if (typeof document === 'undefined') return text.length * fontSize * 0.6;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return text.length * fontSize * 0.6;
+        ctx.font = `${fontSize}px sans-serif`;
+        return ctx.measureText(text).width;
+    }, []);
+
+    const yAxisWidth = useMemo(() => {
+        const dataKeys = series.map((s) => s.dataKey);
+        let maxVal = 0;
+        let minVal = 0;
+        for (const row of data) {
+            for (const key of dataKeys) {
+                const v = Number(row[key]) || 0;
+                if (v > maxVal) maxVal = v;
+                if (v < minVal) minVal = v;
+            }
+        }
+        const candidates = [minVal, maxVal];
+        const fontSize = 12;
+        let maxWidth = 0;
+        for (const val of candidates) {
+            const label = yAxisFormatter ? yAxisFormatter(val) : String(val);
+            const w = measureText(label, fontSize);
+            if (w > maxWidth) maxWidth = w;
+        }
+        return Math.ceil(maxWidth) + 8;
+    }, [data, series, yAxisFormatter, measureText]);
+
     return (
         <ResponsiveContainer width="100%" height={height}>
             <RechartsBarChart
@@ -65,8 +96,8 @@ export default function BarChart({
                 stackOffset={stackOffset === 'sign' ? 'sign' : undefined}
                 margin={{
                     top: 5,
-                    right: 20,
-                    left: 10,
+                    right: 10,
+                    left: 5,
                     bottom: needsBottomMargin ? 50 : 5,
                 }}
             >
@@ -79,6 +110,7 @@ export default function BarChart({
                     height={needsBottomMargin ? 60 : 30}
                 />
                 <YAxis
+                    width={yAxisWidth}
                     tick={{ fill: axisTickColor, fontSize: 12 }}
                     tickFormatter={yAxisFormatter}
                 />
