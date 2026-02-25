@@ -450,10 +450,10 @@ export default function DataTable<T>({
                             <button
                                 type="button"
                                 onClick={() => setChartVisible((v) => !v)}
-                                className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-sm font-medium transition ${
+                                className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-sm font-medium transition bg-indigo-50 ${
                                     chartVisible
-                                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-950 dark:text-indigo-300'
-                                        : 'border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800'
+                                        ? 'border-indigo-500 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-950 dark:text-indigo-300'
+                                        : 'border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:hover:text-gray-300 dark:hover:bg-gray-800'
                                 }`}
                                 title={chartVisible ? 'Hide chart' : 'Show chart'}
                             >
