@@ -86,7 +86,7 @@ export default function BarChart({
             const w = measureText(label, fontSize);
             if (w > maxWidth) maxWidth = w;
         }
-        return Math.ceil(maxWidth) + 8;
+        return Math.ceil(maxWidth) + 6;
     }, [data, series, yAxisFormatter, measureText]);
 
     return (
@@ -98,7 +98,7 @@ export default function BarChart({
                     top: 5,
                     right: 10,
                     left: 5,
-                    bottom: needsBottomMargin ? 50 : 5,
+                    bottom: needsBottomMargin ? 15 : 5,
                 }}
             >
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
@@ -107,7 +107,7 @@ export default function BarChart({
                     tick={{ fill: axisTickColor, fontSize: 12 }}
                     angle={xAxisAngle}
                     textAnchor={xAxisAngle !== 0 ? 'end' : 'middle'}
-                    height={needsBottomMargin ? 60 : 30}
+                    height={needsBottomMargin ? 20 : 15}
                 />
                 <YAxis
                     width={yAxisWidth}
