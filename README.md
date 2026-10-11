@@ -4,7 +4,7 @@
 <h1 align="center">Crypto Tracker</h1>
 
 <p align="center">
-  https://crypto-tracker.null-land.com
+  https://crypto-tracker.null-land.org
 </p>
 
 <p align="center">
