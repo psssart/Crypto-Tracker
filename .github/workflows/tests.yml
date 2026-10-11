@@ -5,10 +5,25 @@ on:
     branches:
       - main
       - '*.x'
+    paths: &test-paths
+      - 'crypto-tracker/**'
+      - '.github/workflows/tests.yml'
+      # Docs, local env files and tooling configs not used by tests.
+      # .env.testing is re-included because tests run with --env=testing.
+      - '!**/*.md'
+      - '!crypto-tracker/.env*'
+      - 'crypto-tracker/.env.testing'
+      - '!crypto-tracker/.editorconfig'
+      - '!crypto-tracker/.gitattributes'
+      - '!crypto-tracker/.gitignore'
+      - '!crypto-tracker/.prettierrc'
+      - '!crypto-tracker/.styleci.yml'
+      - '!crypto-tracker/eslint.config.js'
   pull_request:
     branches:
       - main
       - '*.x'
+    paths: *test-paths
   schedule:
     - cron: '0 0 * * *'
 

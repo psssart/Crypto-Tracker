@@ -4,6 +4,28 @@ on:
   push:
     branches:
       - main
+    # Run only when files that end up in the production images change.
+    # Order matters: later "!" patterns exclude files matched by earlier ones.
+    paths:
+      - 'crypto-tracker/**'
+      - 'php-config/**'
+      - 'nginx/**'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'docker-entrypoint.sh'
+      - '.github/workflows/deploy.yml'
+      # Docs, env files, tests and dev-only tooling configs
+      - '!**/*.md'
+      - '!**/.env*'
+      - '!crypto-tracker/tests/**'
+      - '!crypto-tracker/phpunit.xml'
+      - '!crypto-tracker/.editorconfig'
+      - '!crypto-tracker/.gitattributes'
+      - '!crypto-tracker/.gitignore'
+      - '!crypto-tracker/.prettierrc'
+      - '!crypto-tracker/.styleci.yml'
+      - '!crypto-tracker/eslint.config.js'
+  workflow_dispatch:
 
 env:
   IMAGE_NAME_APP:    pasubi/crypto-tracker-app
