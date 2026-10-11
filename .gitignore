@@ -11,3 +11,5 @@
 .env
 
 .initialized
+server-setup.sh
+SERVER_SETUP.md
